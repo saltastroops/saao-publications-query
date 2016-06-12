@@ -113,8 +113,3 @@ class ADSQueries:
         list of Publication
             The publications with any of the affiliations.
         '''
-
-
-queries = ADSQueries(from_date=datetime.date(2016, 5, 1), to_date=datetime.date(2016, 5, 31))
-
-print(queries.by_journals(['Icar']))
