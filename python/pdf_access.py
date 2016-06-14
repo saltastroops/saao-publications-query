@@ -10,8 +10,9 @@ import config
 def fetch_pdf(bibcode, output_dir):
     '''Fetch and save the pdf for an article.
 
-    An attempt is made to download the publisher article from ADS. If this attempt fails, ADS is queried for the DOI,
-    and if the DOI has been assigned by Elsevier the Science Direct API is used to query for the article pdf.
+    An attempt is made to download the publisher article from ADS. If this attempt fails, ADS is queried for the DOI.
+    If the DOI has been assigned by Elsevier the Science Direct API is used to query for the article pdf.
+    If the DOI has been assigned by Springer, a libk to trhe articl;e is constructyed and used to get the pdf.
 
     If the article could be downloaded and is a pdf the pdf is stored in the output directory, using <bibcode>/pdf as
     the file name. Otherwise an exception is raised.
@@ -55,22 +56,27 @@ def fetch_pdf(bibcode, output_dir):
             raise BaseException('No DOI found for bibcode: {bibcode}'.format(bibcode=bibcode))
         doi = results[0].doi[0]
 
-        # is Elsevier the publisher?
-        if not doi.startswith('10.1016'):
+        if doi.startswith('10.1016'):
+            # the publisher is Elsevier
+            # ask Science Direct for the pdf
+            headers = {
+                'Accept': 'application/pdf',
+                'X-ELS-APIKey': config.SCIENCE_DIRECT_API_KEY
+            }
+            response = requests.get(
+                url= 'http://api.elsevier.com/content/article/doi/{doi}'.format(doi=doi),
+                headers=headers
+            )
+            if response.status_code != 200:
+                raise BaseException('Science Direct API query failed with status code {code}'
+                                    .format(code=response.status_code))
+        elif doi.startswith('10.1007') or doi.startswith('10.1134'):
+            # the publisher is Springer
+            url = 'http://link.springer.com/content/pdf/{doi}'.format(doi=doi.replace('/', '%2F'))
+            response = requests.get(url)
+        else:
             raise BaseException('I do not know how to get the pdf for this DOI: {doi}'.format(doi=doi))
 
-        # ask Science Direct for the pdf
-        headers = {
-            'Accept': 'application/pdf',
-            'X-ELS-APIKey': config.SCIENCE_DIRECT_API_KEY
-        }
-        response = requests.get(
-            url= 'http://api.elsevier.com/content/article/doi/{doi}'.format(doi=doi),
-            headers=headers
-        )
-        if response.status_code != 200:
-            raise BaseException('Science Direct API query failed with status code {code}'
-                                .format(code=response.status_code))
     elif response.status_code != 200:
         raise BaseException('HTTP request failed with status code {0}'.format(response.status_code))
 
