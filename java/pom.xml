@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>za.ac.salt</groupId>
-    <artifactId>publicationKeywordSearch</artifactId>
+    <artifactId>pdf-keyword-search</artifactId>
     <version>current</version>
 
     <build>
@@ -27,13 +27,30 @@
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-assembly-plugin</artifactId>
+                <artifactId>maven-jar-plugin</artifactId>
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>za.ac.salt.KeywordSearch</mainClass>
+                            <addClasspath>true</addClasspath>
+                            <mainClass>za.ac.saao.KeywordSearch</mainClass>
                         </manifest>
                     </archive>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <finalName>${artifactId}-${version}</finalName>
                 </configuration>
             </plugin>
         </plugins>
