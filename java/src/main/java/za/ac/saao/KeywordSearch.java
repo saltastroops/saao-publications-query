@@ -116,19 +116,8 @@ public class KeywordSearch
      * {@code null} is used to indicate that the keyword search for the corresponding PDF file couldn't be executed.
      */
     public static void main(String[] argv) throws Exception {
-        String json = "{"
-                + "\"pdfs\": ["
-                + "    \"/Users/christian/Desktop/PDFs/2016MNRAS.459.1422E.pdf\","
-                + "    \"/Users/christian/Desktop/PDFs/2016Icar..271..350J.pdf\""
-                + "],"
-                + "\"keywords\": ["
-                + "    \"South African Astronomical Observatory\","
-                + "    \"KELT\""
-                + "]"
-                + "}";
-        ByteArrayInputStream in = new ByteArrayInputStream(json.getBytes());
         ObjectMapper mapper = new ObjectMapper();
-        SearchParameters parameters = mapper.readValue(in, SearchParameters.class);
+        SearchParameters parameters = mapper.readValue(System.in, SearchParameters.class);
 
         List<SearchResult> results = new ArrayList<>();
         KeywordSearch search = new KeywordSearch(Arrays.asList(parameters.getKeywords()));
