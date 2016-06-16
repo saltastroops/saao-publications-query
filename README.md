@@ -16,14 +16,32 @@ The following requirements must be met for this project.
 * Python 3.5 or higher must be installed.
 * The Python libraries in `requirements.txt` must be installed.
 * Java 1.8 ("Java 8") or higher must be installed.
+* Apache Maven 3.3.9 or higher must be installed.
 * You need API keys for the ADS and Science Direct (see the section on configuration below).
+
+## Installation
+
+The easiest way to install the project is to clone it onto your machine.
+
+```bash
+git clone git@bitbucket.org:hettlage/saao-publications-query.git
+```
+
+After cloning the repository and after pulling changes you should use Maven to package the Java program.
+
+```bash
+cd java
+mvn package
+```
+
+Finally, you need to add a configuration file, as explained in the following section. 
 
 ## Configuration
 
 You need to copy the file `python/config.example.py` to `python/config.py` and define the following constants in it.
 
 | Constant | Description | Example |
-| == | == | == |
+| -- | -- | -- |
 | `JOURNALS` | Array of bibcode abbreviations of journals to query | `['ApJ', 'MNRAS']` |
 | `KEYWORDS` | Array of keywords to search for | `['SAAO', 'KELT', 'Infrared Survey'] ` |
 | `AUTHORS` | Dictionary of authors to search for and their email addresses | `{'Buckley, D': ''David Buckley <dibnob@saao.ac.za>', 'Mohammed, S': 'Shazrene Mohammed <shazrene@saao.ac.za>'}` |
@@ -52,3 +70,94 @@ SCIENCE_DIRECT_API_KEY = os.environ['SCIENCE_DIRECT_API_KEY']
 
 Here is an example of what the configuration file might look like.
 
+```python
+import os
+
+# ADS bibcode abbreviations of journals to query
+JOURNALS = [
+    'A&A',
+    'A&ARv',
+    'AJ',
+    'AN',
+    'ARA&A',
+    'ARep',
+    'Afz',
+    'Ap',
+    'Ap&SS',
+    'AstL',
+    'Icar',
+    'MNRAS',
+    'NATUR',
+    'NewA',
+    'NewAR',
+    'PASJ',
+    'PASP'
+]
+
+# keywords to search for
+KEYWORDS = [
+    'KELT',
+    'Infrared Survey'
+]
+
+# authors to search for and their email addresses
+AUTHORS = {
+    'Skelton, R': 'Ros Skelton <ros@saao.ac.za>',
+    'Kniazev, A': 'Alexei Kniazev <akniazev@saao.ac.za~'
+}
+
+# email addresses of the librarians
+LIBRARIAN_EMAIL_ADDRESSES = [
+    'Theresa de Young <theresa@saao.ac.za>',
+    'Zuthobeke Mvakade <zm@saao.ac.za>'
+]
+
+ADS_API_KEY = os.environ['ADS_API_KEY']
+
+SCIENCE_DIRECT_API_KEY = os.environ['SCIENCE_DIRECT_API_KEY']
+
+OUTPUT_DIR = '/Users/christian/Desktop/PUBLICATIONS'
+```
+
+## Architecture
+
+The project consists of a Python script and a Java program. The role of the Python script is to carry out all the queries to ADS, download the PDF files, initiate the keyword search, put together spreadsheets with the results and finally send out emails.
+
+The sole responsibility of the Java program is to search for the keywords in the downloaded PDF files. This part isn't realised in Python, as the parsing of PDF files is faster in Java by one or two orders of magnitude.
+
+The Python script calls the Java program by running a subprocess. The paths to the PDF files and the keywords are passed as a JSON object to the stdin stream of the Java program.
+
+```json
+{
+    "pdfs": ["/path/to/file1", "/path/to/file2", ..., "/path/to/fileN"],
+    "keywords": ["keyword1", "keyword2", ..., "keywordN"]
+ }
+```
+
+The results of the keyword search are passed back to the Python script as a JSON object via the Java program's stdout stream.
+
+```json
+{
+    "results": [
+        {
+            "pdf": "/path/to/file1",
+            "keywords": ["keyword3", "keyword7"]
+        },
+        {
+            "pdf": "/path/to/file2",
+            "keywords": []
+        },
+        {
+            "pdf": "/path/to/file3",
+            "keywords": null
+        }
+    ]
+}
+```
+
+`null` is used as the value for the keywords if the keyword search couldn't be executed for the corresponding PDF.
+
+The Python script uses the [ads](https://github.com/andycasey/ads) library for performing the ADS queries. Its requirements are handled with `pip`, and the requirements are listed in the file `requirements.txt`.
+
+The Java program uses the [itextpdf](http://itextpdf.com) library for parsing the PDF files. It is contained in a Maven project.         
+    
