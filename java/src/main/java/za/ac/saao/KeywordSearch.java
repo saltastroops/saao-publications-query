@@ -1,4 +1,4 @@
-package za.ac.salt;
+package za.ac.saao;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.itextpdf.text.pdf.PdfReader;
@@ -81,7 +81,7 @@ public class KeywordSearch
     }
 
     /**
-     * Script for searching keywords in a set of PDFs.
+     * Search keywords in a set of PDFs.
      *
      * The search parameters must be passed to System.in as a JSON object of the following form:
      *
@@ -91,6 +91,29 @@ public class KeywordSearch
      *         "keywords": ["keyword1", "keyword2", ..., "keywordN"]
      *     }
      * </pre>
+     *
+     * The search results are output to System.out as a JSON object of the following form:
+     *
+     * <pre>
+     * {
+     *     "results": [
+     *         {
+     *             "pdf": "/path/to/file1",
+     *             "keywords": ["keyword3", "keyword7"]
+     *         },
+     *         {
+     *             "pdf": "/path/to/file2",
+     *             "keywords": []
+     *         },
+     *         {
+     *             "pdf": "/path/to/file3",
+     *             "keywords": null
+     *         }
+     *     ]
+     * }
+     * </pre>
+     *
+     * {@code null} is used to indicate that the keyword search for the corresponding PDF file couldn't be executed.
      */
     public static void main(String[] argv) throws Exception {
         String json = "{"
@@ -107,19 +130,19 @@ public class KeywordSearch
         ObjectMapper mapper = new ObjectMapper();
         SearchParameters parameters = mapper.readValue(in, SearchParameters.class);
 
-        Map<String, List<String>> keywords = new HashMap<>();
+        List<SearchResult> results = new ArrayList<>();
         KeywordSearch search = new KeywordSearch(Arrays.asList(parameters.getKeywords()));
         for (String pdf: parameters.getPdfs()) {
             try {
-                keywords.put(pdf, search.search(new FileInputStream(pdf)));
+                results.add(new SearchResult(pdf, search.search(new FileInputStream(pdf))));
             }
             catch (Exception e) {
-                keywords.put(pdf, null);
+                results.add(new SearchResult(pdf, null));
             }
         }
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        mapper.writeValue(out, keywords);
+        mapper.writeValue(out, Collections.singletonMap("results", results));
         System.out.println(out.toString());
     }
 
@@ -137,6 +160,43 @@ public class KeywordSearch
         public void setPdfs(String[] pdfs)
         {
             this.pdfs = pdfs;
+        }
+
+        public String[] getKeywords()
+        {
+            return keywords;
+        }
+
+        public void setKeywords(String[] keywords)
+        {
+            this.keywords = keywords;
+        }
+    }
+
+    private static class SearchResult
+    {
+        public String pdf;
+
+        public String[] keywords;
+
+        public SearchResult(String pdf, List<String> keywords) {
+            this.pdf = pdf;
+            if (keywords != null) {
+                this.keywords = keywords.toArray(new String[] {});
+            }
+            else {
+                this.keywords = null;
+            }
+        }
+
+        public String getPdf()
+        {
+            return pdf;
+        }
+
+        public void setPdf(String pdf)
+        {
+            this.pdf = pdf;
         }
 
         public String[] getKeywords()

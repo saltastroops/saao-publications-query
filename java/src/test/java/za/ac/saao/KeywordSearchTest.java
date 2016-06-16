@@ -1,4 +1,4 @@
-package za.ac.salt;
+package za.ac.saao;
 
 import org.junit.Assert;
 import org.junit.Test;
