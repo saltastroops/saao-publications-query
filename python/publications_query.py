@@ -34,8 +34,8 @@ def pdf_keywords_query(queries):
     Articles with a temporary bibcode are ignored.
 
     A tuple is returned. The first item in this tuple is a dictionary of the bibcodes for which at least one keyword
-    was found and the keywords found. The second item is the list of bibcodes for which the keyword search couldn't
-    be performed, for example because the PDF couldn't be downloaded.
+    was found and full pubvlication details, including the keywords found. The second item is the list of bibcodes for
+    which the keyword search couldn't be performed, for example because the PDF couldn't be downloaded.
 
     Params:
     -------
@@ -54,7 +54,7 @@ def pdf_keywords_query(queries):
     bibcodes = queries.by_journals(config.JOURNALS)
 
     # ignore temporary bibcodes
-    bibcodes = ignore_tmp_bibcodes(bibcodes)
+    bibcodes = [bibcode for bibcode in bibcodes if 'tmp' not in bibcode]
 
     # attempt to download all the pdfs
     for index, bibcode in enumerate(bibcodes):
@@ -65,7 +65,6 @@ def pdf_keywords_query(queries):
             print('FAILED: {0}'.format(e))
 
     # get the keyword search parameters
-    bibcodes.append('RXT6785')
     pdf_bibcodes = {os.path.join(config.OUTPUT_DIR, '{bibcode}.pdf'.format(bibcode=bibcode)):bibcode
                     for bibcode in bibcodes}
     pdfs = list(pdf_bibcodes.keys())
@@ -80,8 +79,13 @@ def pdf_keywords_query(queries):
     p = subprocess.run(['java', '-jar', jar], input=bytearray(params, encoding='UTF-8'), stdout=subprocess.PIPE)
     results = json.loads(p.stdout.decode('UTF-8'))['results']
 
-    # parse the results
-    keywords_found = {pdf_bibcodes[r['pdf']]:r['keywords'] for r in results if r['keywords']}
+    # get the full details for the publications for which keywords were found
+    keywords_found_bibcodes = [pdf_bibcodes[r['pdf']] for r in results if r['keywords']]
+    keywords_found = dict()
+    for bibcode in keywords_found_bibcodes:
+        keywords_found[bibcode] = queries.full_details(bibcode)
+
+    # inconclusive results
     inconclusive = [pdf_bibcodes[r['pdf']] for r in results if r['keywords'] is None]
 
     return keywords_found, inconclusive
@@ -89,4 +93,8 @@ def pdf_keywords_query(queries):
 
 queries = ADSQueries(from_date=datetime.datetime.now().date(), to_date=datetime.datetime.now().date())
 
-pdf_keywords_query(queries)
+r = queries.by_keywords(config.KEYWORDS)
+r = {b:r[b] for b in r if 'REFEREED' in r[b]['property']}
+for bibcode in r:
+    print('{bibcode}: {keywords}'.format(bibcode=bibcode,
+                                                      keywords=r[bibcode]['keywords']))
