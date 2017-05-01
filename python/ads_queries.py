@@ -30,7 +30,9 @@ class ADSQueries:
             'doi',
             'page',
             'property',
+            'pub',
             'pubdate',
+            'title',
             'volume'
         ]
         self.num_pages = 30
@@ -38,13 +40,14 @@ class ADSQueries:
     def by_journals(self, journals):
         """Query ADS for the publications published in any of a list of journals.
 
-        Contrary to the other query methods in this class a list of bibcodes is returned.
+        Contrary to the other query methods in this class a list of bibcodes is returned, as otherwise tons of
+        essentially useless data would be requested (given that only a tiny minority of articles will be relevant).
 
         Params:
         -------
         journals: list of str
             The list of journals to query. The abbreviation used in ADS bibcodes must be used for the journals. For
-            example, Monthly Notices and Astronomy & Astrophysics woulds be specified as 'MNRAS' and 'A&A'.
+            example, Monthly Notices and Astronomy & Astrophysics would be specified as 'MNRAS' and 'A&A'.
 
         Returns:
         --------
@@ -105,7 +108,16 @@ class ADSQueries:
             The publications containing any of the authors.
         """
 
-        pass
+        publications = dict()
+        for author in authors:
+            print('Searching for ' + author)
+            q = 'author:"{author}" AND pubdate:{pubdate}'.format(author=author, pubdate=self.pubdate)
+            query = ads.SearchQuery(q=q, fl=self.fields, fq='database:astronomy')
+            for result in list(query):
+                if result.bibcode not in publications:
+                    publications[result.bibcode] = {f:getattr(result, f) for f in self.fields}
+
+        return publications
 
     def by_affiliations(self, affiliations):
         """Query ADS for the publications with any of a list of affiliations.
@@ -123,7 +135,18 @@ class ADSQueries:
         list of Publication
             The publications with any of the affiliations.
         """
-        pass
+
+        publications = dict()
+        for affiliation in affiliations:
+            print('Searching for ' + affiliation)
+            q = 'aff:"{affiliation}" AND pubdate:{pubdate}'.format(affiliation=affiliation,
+                                                                           pubdate=self.pubdate)
+            query = ads.SearchQuery(q=q, fl=self.fields, fq='database:astronomy')
+            for result in list(query):
+                if result.bibcode not in publications:
+                    publications[result.bibcode] = {f:getattr(result, f) for f in self.fields}
+
+        return publications
 
     def full_details(self, bibcode):
         """Query ADS for the full details of a publication.
