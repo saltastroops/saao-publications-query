@@ -17,7 +17,6 @@ from email.mime.text import MIMEText
 
 import config
 from ads_queries import ADSQueries
-from pdf_access import fetch_pdf
 
 
 def ignore_tmp_bibcodes(bibcodes):
@@ -35,72 +34,6 @@ def ignore_tmp_bibcodes(bibcodes):
     """
 
     return [bibcode for bibcode in bibcodes if 'tmp' not in bibcode]
-
-
-def pdf_keywords_query(queries):
-    """Query the publication PDFs for keywords.
-
-    ADS is queried for the articles published in the list of journals defined in the configuration. The PDFs for these
-    articles are downloaded and queried for rthe list of keywords defined in the configuration.
-
-    Articles with a temporary bibcode are ignored.
-
-    A tuple is returned. The first item in this tuple is a dictionary of the bibcodes for which at least one keyword
-    was found and full pubvlication details, including the keywords found. The second item is the list of bibcodes for
-    which the keyword search couldn't be performed, for example because the PDF couldn't be downloaded.
-
-    Params:
-    -------
-    queries: ADSQueries
-        ADSQueries instance.
-
-    Returns:
-    --------
-    tuple
-        Tuple of a dictionary of bibcodes and keywords found and the list of bibcodes for which the keyword search
-        couldn't be executed.
-
-    """
-
-    # get the bibcodes for the journals whose articles should be downloaded as pdf
-    bibcodes = queries.by_journals(config.JOURNALS)
-
-    # ignore temporary bibcodes
-    bibcodes = [bibcode for bibcode in bibcodes if 'tmp' not in bibcode]
-
-    # attempt to download all the pdfs
-    for index, bibcode in enumerate(bibcodes):
-        print('[{index}/{total}] Trying to get PDF for {bibcode}...'.format(index=index + 1, total=len(bibcodes), bibcode=bibcode))
-        try:
-            fetch_pdf(bibcode=bibcode, output_dir=config.PDFS_OUTPUT_DIR)
-        except BaseException as e:
-            print('FAILED: {0}'.format(e))
-
-    # get the keyword search parameters
-    pdf_bibcodes = {os.path.join(config.PDFS_OUTPUT_DIR, '{bibcode}.pdf'.format(bibcode=bibcode)):bibcode
-                    for bibcode in bibcodes}
-    pdfs = list(pdf_bibcodes.keys())
-    params = json.dumps(dict(pdfs=pdfs, keywords=config.KEYWORDS))
-
-    # perform the keyword search
-    jar = os.path.join(os.path.dirname(__file__),
-                       os.pardir,
-                       'java',
-                       'target',
-                       'pdf-keyword-search-current.jar')
-    p = subprocess.run(['java', '-jar', jar], input=bytearray(params, encoding='UTF-8'), stdout=subprocess.PIPE)
-    results = json.loads(p.stdout.decode('UTF-8'))['results']
-
-    # get the full details for the publications for which keywords were found
-    keywords_found_bibcodes = [pdf_bibcodes[r['pdf']] for r in results if r['keywords']]
-    keywords_found = dict()
-    for bibcode in keywords_found_bibcodes:
-        keywords_found[bibcode] = queries.full_details(bibcode)
-
-    # inconclusive results
-    inconclusive = [pdf_bibcodes[r['pdf']] for r in results if r['keywords'] is None]
-
-    return keywords_found, inconclusive
 
 
 def previously_found_bibcodes():
@@ -121,25 +54,6 @@ def previously_found_bibcodes():
 
     with open(config.PREVIOUS_BIBCODES_FILE) as f:
         return [line.strip() for line in f.readlines()]
-
-
-def update_previously_found_bibcodes(new_bibcodes):
-    """Update the file for recording previously fopund publications.
-
-    The previously found publications are stored as bibcode in a file, whose path is set as PREVIOUS_BIBCODES_FILE in
-    the configuration file. If this file doesn't exist, it is created first. If it cannot be created, an exception is
-    raised.
-
-    The given bibcodes are appended to the file. It isn't checked whether they are valid or whether they exist in the
-    file already.
-    """
-
-    # create the file for storing previously found bibcodes, if need be
-    _ensure_previously_recorded_file_exists()
-
-    with open(config.PREVIOUS_BIBCODES_FILE, 'a') as f:
-        for bibcode in new_bibcodes:
-            f.write(bibcode + '\n')
 
 
 def _ensure_previously_recorded_file_exists():
@@ -219,7 +133,6 @@ def spreadsheet_columns():
     columns['abstract'] = 'Abstract'
     columns['telescopes'] = 'Telescopes'
     columns['keywords'] = 'Keywords'
-    columns['found_by_pdf'] = 'Found by PDF'
 
     return columns
 
@@ -262,23 +175,18 @@ def send_mails(spreadsheets, columns):
     with smtplib.SMTP('smtp.saao.ac.za') as s:
         s.sendmail(config.FROM_EMAIL_ADDRESS, config.LIBRARIAN_EMAIL_ADDRESSES, outer.as_string())
 
-d = datetime.date(2017, 4, 15)
+d = datetime.date(2017, 6, 15)
 queries = ADSQueries(from_date=d, to_date=d)
 
-by_pdfs, inconclusive = pdf_keywords_query(queries)
 by_keywords = queries.by_keywords(config.KEYWORDS)
 by_authors = queries.by_authors(config.AUTHORS.keys())
 by_affiliations = queries.by_affiliations(config.AFFILIATIONS)
 
-all = {**by_pdfs, **by_keywords, **by_authors, **by_affiliations}
+all = {**by_keywords, **by_authors, **by_affiliations}
 
 # make sure the keywords are present
 for b in by_keywords:
     all[b]['keywords'] = by_keywords[b]['keywords']
-
-# record whether the publications were found by the pdf search
-for b in all.keys():
-    all[b]['found_by_pdf'] = True if b in by_pdfs.keys() else False
 
 # now that we have collected everything, we can flatten our map to a list
 publications = [all[b] for b in all.keys()]
@@ -292,9 +200,6 @@ for p in publications:
 for p in publications:
     p['refereed'] = 'REFEREED' in p['property']
 
-# get the list of publications not covered in a previous search
-new_publications = [p for p in publications if p['bibcode'] not in previously_found_bibcodes()]
-
 # make some content more amenable to humans and xslxwriter alike
 for p in publications:
     list_value_columns = ['author', 'title', 'doi', 'keywords', 'page']
@@ -304,19 +209,6 @@ for p in publications:
 
 columns = spreadsheet_columns()
 send_mails([
-    dict(name='all.xlsx', content=publications_spreadsheet(publications, columns.keys())),
-    dict(name='new.xlsx', content=publications_spreadsheet(new_publications, columns.keys()))
+    dict(name='all.xlsx', content=publications_spreadsheet(publications, columns.keys()))
 ], columns)
-
-
-# store found bibcodes
-update_previously_found_bibcodes([p['bibcode'] for p in new_publications])
-
-r = queries.by_authors(config.AUTHORS)
-for bibcode in r:
-    print('{bibcode}: {r}'.format(bibcode=bibcode, r=r[bibcode]))
-r = queries.by_keywords(config.KEYWORDS)
-r = {b:r[b] for b in r if 'REFEREED' in r[b]['property']}
-for bibcode in r:
-    print('{bibcode}: {keywords}'.format(bibcode=bibcode,
-                                                      keywords=r[bibcode]['keywords']))
+gitt
