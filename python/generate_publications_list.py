@@ -1,5 +1,10 @@
 """
-Generate HTML containing the SAAO publications list. This can be used on the SAAO's website.
+Generate a list of SAAO publications.
+
+You need to have Cairo and Pango installed for running this script. For macOS and HomeBrew:
+
+brew install cairo
+brew install pango
 
 The publications are read from an Excel spreadsheet with the following columns:
 
@@ -11,18 +16,26 @@ VOL: Journal volume.
 FPG: First page of the publication.
 URL: URL for this publication. In most cases this is a link to the ADS.
 
-The generated HTML is printed to the standard output.
+The publications are grouped by year, and within a year they are ordered by their id, in descending
+order.
 
-Usage: python generate_publications_list_html.py /path/to/spreadsheet
+The format flag must be used to specify whether to generate the list as html or pdf.
+
+The generated list is printed to the standard output.
+
+Usage: python generate_publications_list.py --format pdf|html --spreadsheet /path/to/spreadsheet --out /path/to/output
 """
 
 import argparse
 import datetime
 import numpy as np
 import pandas as pd
+from weasyprint import HTML
 
 parser = argparse.ArgumentParser()
-parser.add_argument('spreadsheet', help='spreadsheet with the SAAO publication data')
+parser.add_argument('--format', help='format of the generated list (html or pdf)', required=True)
+parser.add_argument('--spreadsheet', help='spreadsheet with the SAAO publication data', required=True)
+parser.add_argument('--out', help='Output file', required=True)
 args = parser.parse_args()
 
 
@@ -36,7 +49,11 @@ def create_html():
     for year in range(end_year, start_year - 1, -1):
         html += '<h2>{year}</h2>\n'.format(year=year)
         df_year = df[np.isclose(df['YEAR'].values, year)]
+        rows = []
         for _, row in df_year.iterrows():
+            rows.append(row)
+        rows.sort(key=lambda x: str(x['PSAAO']), reverse=True)
+        for row in rows:
             html += create_row_content(year, row)
 
     return html
@@ -112,4 +129,11 @@ def create_telescopes(telescopes):
     return '<em>[{telescopes}]</em>'.format(telescopes=telescopes.replace('|', ', '))
 
 
-print(create_html())
+html = create_html()
+if args.format == 'html':
+    with open(args.out, 'w') as f:
+        f.write(html)
+elif args.format == 'pdf':
+    HTML(string=html).write_pdf(args.out)
+else:
+    raise ValueError('Unsupported format: {format}'.format(format=args.format))
