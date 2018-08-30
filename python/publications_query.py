@@ -211,4 +211,3 @@ columns = spreadsheet_columns()
 send_mails([
     dict(name='all.xlsx', content=publications_spreadsheet(publications, columns.keys()))
 ], columns)
-gitt
