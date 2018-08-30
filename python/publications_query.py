@@ -198,7 +198,7 @@ for p in publications:
 
 # add refereed status
 for p in publications:
-    p['refereed'] = 'REFEREED' in p['property']
+    p['refereed'] = p['property'] and 'REFEREED' in p['property']
 
 # make some content more amenable to humans and xslxwriter alike
 for p in publications:
