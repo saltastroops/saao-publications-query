@@ -6,6 +6,8 @@ import os
 import re
 import smtplib
 import subprocess
+import sys
+import time
 import xlsxwriter
 
 from email import encoders
@@ -17,6 +19,7 @@ from email.mime.text import MIMEText
 
 import config
 from ads_queries import ADSQueries
+from wos_queries import WoSQueries
 
 
 def ignore_tmp_bibcodes(bibcodes):
@@ -130,6 +133,7 @@ def spreadsheet_columns():
     columns['bibcode'] = 'Bibcode'
     columns['doi'] = 'DOI'
     columns['ads_url'] = 'ADS URL'
+    columns['doi_in_wos'] = 'DOI in WoS'
     columns['abstract'] = 'Abstract'
     columns['telescopes'] = 'Telescopes'
     columns['keywords'] = 'Keywords'
@@ -203,6 +207,16 @@ publications.sort(key=lambda p: p['bibcode'])
 # add URL to ADS page
 for p in publications:
     p['ads_url'] = 'https://ui.adsabs.harvard.edu/#abs/{0}/abstract'.format(p['bibcode'])
+
+# check whether the DOI is indexed in the Web of Science (WoS)
+wos_queries = WoSQueries()
+for i, p in enumerate(publications):
+    print(f'Querying WoS for publication {i + 1} of {len(publications)}')
+    doi = p['doi'][0] if p['doi'] and len(p['doi']) > 0 else None
+    p['doi_in_wos'] = wos_queries.is_doi_indexed(doi).value
+
+    # avoid HTTP 429 Too Many Requests errors
+    time.sleep(1)
 
 # add refereed status
 for p in publications:
