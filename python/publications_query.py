@@ -204,6 +204,9 @@ for b in by_keywords:
 publications = [all[b] for b in all.keys()]
 publications.sort(key=lambda p: p['bibcode'])
 
+# exclude arXiv preprints
+publications = [p for p in publications if 'arXiv' not in p['bibcode']]
+
 # add URL to ADS page
 for p in publications:
     p['ads_url'] = 'https://ui.adsabs.harvard.edu/#abs/{0}/abstract'.format(p['bibcode'])
