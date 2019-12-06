@@ -175,8 +175,16 @@ def send_mails(spreadsheets, columns):
     with smtplib.SMTP('smtp.saao.ac.za') as s:
         s.sendmail(config.FROM_EMAIL_ADDRESS, config.LIBRARIAN_EMAIL_ADDRESSES, outer.as_string())
 
-d = datetime.date(2017, 6, 15)
-queries = ADSQueries(from_date=d, to_date=d)
+
+# By default the start date is the current date, but you can pass a date on the command
+# line instead.
+if len(sys.argv) > 1:
+    year, month, day = sys.argv[1].split("-")
+    start_date = datetime.date(int(year), int(month), int(day))
+else:
+    start_date = datetime.datetime.now()
+end_date = start_date
+queries = ADSQueries(from_date=start_date, to_date=end_date)
 
 by_keywords = queries.by_keywords(config.KEYWORDS)
 by_authors = queries.by_authors(config.AUTHORS.keys())
