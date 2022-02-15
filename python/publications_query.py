@@ -185,9 +185,11 @@ def send_mails(spreadsheets, columns):
 if len(sys.argv) > 1:
     year, month, day = sys.argv[1].split("-")
     start_date = datetime.date(int(year), int(month), int(day))
+    year, month, day = sys.argv[2].split("-")
+    end_date = datetime.date(int(year), int(month), int(day))
 else:
-    start_date = datetime.datetime.now()
-end_date = start_date
+    end_date = datetime.datetime.now()
+    start_date = end_date - datetime.timedelta(days=30)
 queries = ADSQueries(from_date=start_date, to_date=end_date)
 
 by_keywords = queries.by_keywords(config.KEYWORDS)
@@ -206,6 +208,10 @@ publications.sort(key=lambda p: p['bibcode'])
 
 # exclude arXiv preprints
 publications = [p for p in publications if 'arXiv' not in p['bibcode']]
+
+# exclude certain journals
+excluded_journals = [journal.lower() for journal in config.EXCLUDED_JOURNALS]
+publications = [p for p in publications if p["pub"].lower() not in excluded_journals]
 
 # add URL to ADS page
 for p in publications:

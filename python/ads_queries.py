@@ -1,6 +1,3 @@
-import datetime
-import os
-
 import ads
 
 import config
@@ -19,7 +16,7 @@ class ADSQueries:
         Latest date for which publications should be queried. Only the year and month are relevant.
     """
 
-    def __init__(self, from_date, to_date):
+    def __init__(self, from_date, to_date, max_pages=30):
         ads.config.token = config.ADS_API_KEY
         self.pubdate = '[{from_date} TO {to_date}]'.format(from_date=from_date.strftime('%Y-%m'),
                                                            to_date=to_date.strftime('%Y-%m'))
@@ -35,7 +32,7 @@ class ADSQueries:
             'title',
             'volume'
         ]
-        self.num_pages = 30
+        self.max_pages = max_pages
 
     def by_journals(self, journals):
         """Query ADS for the publications published in any of a list of journals.
@@ -58,7 +55,7 @@ class ADSQueries:
         bibcodes = []
         for journal in journals:
             q = 'bibstem:{journal} AND pubdate:{pubdate}'.format(journal=journal, pubdate=self.pubdate)
-            query = ads.SearchQuery(q=q, fl=['bibcode'])
+            query = ads.SearchQuery(q=q, fl=['bibcode'], max_pages=self.max_pages)
             bibcodes.extend([a.bibcode for a in list(query)])
         return bibcodes
 
@@ -82,7 +79,7 @@ class ADSQueries:
         for keyword in keywords:
             print('Searching for ' + keyword)
             q = 'full:"{keyword}" AND pubdate:{pubdate}'.format(keyword=keyword, pubdate=self.pubdate)
-            query = ads.SearchQuery(q=q, fl=self.fields, fq='database:astronomy')
+            query = ads.SearchQuery(q=q, fl=self.fields, fq='database:astronomy', max_pages=self.max_pages)
             for result in list(query):
                 if result.bibcode not in publications:
                     publications[result.bibcode] = {f:getattr(result, f) for f in self.fields}
@@ -112,7 +109,7 @@ class ADSQueries:
         for author in authors:
             print('Searching for ' + author)
             q = 'author:"{author}" AND pubdate:{pubdate}'.format(author=author, pubdate=self.pubdate)
-            query = ads.SearchQuery(q=q, fl=self.fields, fq='database:astronomy')
+            query = ads.SearchQuery(q=q, fl=self.fields, fq='database:astronomy', max_pages=self.max_pages)
             for result in list(query):
                 if result.bibcode not in publications:
                     publications[result.bibcode] = {f:getattr(result, f) for f in self.fields}
@@ -141,7 +138,7 @@ class ADSQueries:
             print('Searching for ' + affiliation)
             q = 'aff:"{affiliation}" AND pubdate:{pubdate}'.format(affiliation=affiliation,
                                                                            pubdate=self.pubdate)
-            query = ads.SearchQuery(q=q, fl=self.fields, fq='database:astronomy')
+            query = ads.SearchQuery(q=q, fl=self.fields, fq='database:astronomy', max_pages=self.max_pages)
             for result in list(query):
                 if result.bibcode not in publications:
                     publications[result.bibcode] = {f:getattr(result, f) for f in self.fields}
@@ -166,7 +163,7 @@ class ADSQueries:
         """
 
         try:
-            query = ads.SearchQuery(bibcode=bibcode, fl=self.fields)
+            query = ads.SearchQuery(bibcode=bibcode, fl=self.fields, max_pages=self.max_pages)
             details = list(query)[0]
             return {f:getattr(details, f) for f in self.fields}
         except:
