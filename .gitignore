@@ -1,5 +1,4 @@
 __pycache__
 venv
 java/target
-python/config.py
 java/dependency-reduced-pom.xml

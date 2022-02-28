@@ -1,19 +1,15 @@
 import collections
 import datetime
 import io
-import json
 import os
 import re
 import smtplib
-import subprocess
 import sys
 import time
 import xlsxwriter
 
 from email import encoders
-from email.message import Message
 from email.mime.base import MIMEBase
-from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -124,8 +120,10 @@ def spreadsheet_columns():
     columns['record_type'] = 'Record Type'
     columns['publication_number'] = 'Doc/Publication Number'
     columns['author'] = 'Responsibility'
+    columns['institute_of_1st_author'] = 'Institute of first author'
     columns['title'] = 'Title'
     columns['pub'] = 'Journal'
+    columns['pubdate'] = 'Publication date (YYYY-MM-DD)'
     columns['volume'] = 'Volume'
     columns['issue'] = 'Issue'
     columns['page'] = 'Page'
@@ -136,14 +134,19 @@ def spreadsheet_columns():
     columns['doi_in_wos'] = 'DOI in WoS'
     columns['abstract'] = 'Abstract'
     columns['telescopes'] = 'Telescopes'
-    columns['keywords'] = 'Keywords'
+    columns['fulltext_keywords'] = 'Keywords to search for in fulltext'
+    columns['keyword'] = 'Keywords'
+    columns['aff'] = 'Authors\' affiliation'
+    columns['SALT_partners'] = 'SALT partner institutions'
+    # columns['number_of_SA_authors'] = 'No. of authors on paper affiliated to a SA institution'
+    # columns['authors_affiliated_with_SAAO'] = 'Authors affiliated with SAAO'
 
     return columns
 
 
 def send_mails(spreadsheets, columns):
     column_explanation = '\n'.join([chr(ord('A') + i) + ' - ' + columns[key] + '<br>'
-                                   for i, key in enumerate(columns.keys())])
+                                    for i, key in enumerate(columns.keys())])
 
     outer = MIMEMultipart()
     outer['Subject'] = 'Publications Query Results'
@@ -177,7 +180,7 @@ def send_mails(spreadsheets, columns):
         outer.attach(msg)
 
     with smtplib.SMTP('smtp.saao.ac.za') as s:
-        s.sendmail(config.FROM_EMAIL_ADDRESS, config.LIBRARIAN_EMAIL_ADDRESSES, outer.as_string())
+        s.sendmail(config.FROM_EMAIL_ADDRESS, config.LIBRARIAN_EMAIL_ADDRESSES.strip('][').split(', '), outer.as_string())
 
 
 # By default the start date is the current date, but you can pass a date on the command
@@ -192,18 +195,19 @@ else:
     start_date = end_date - datetime.timedelta(days=30)
 queries = ADSQueries(from_date=start_date, to_date=end_date)
 
-by_keywords = queries.by_keywords(config.KEYWORDS)
+by_fulltext_keywords = queries.by_fulltext_keywords(config.KEYWORDS)
 by_authors = queries.by_authors(config.AUTHORS.keys())
 by_affiliations = queries.by_affiliations(config.AFFILIATIONS)
+by_institutions = queries.by_affiliations(config.INSTITUTIONS)
 
-all = {**by_keywords, **by_authors, **by_affiliations}
+all_queries = {**by_fulltext_keywords, **by_authors, **by_affiliations, **by_institutions}
 
 # make sure the keywords are present
-for b in by_keywords:
-    all[b]['keywords'] = by_keywords[b]['keywords']
+for b in by_fulltext_keywords:
+    all_queries[b]['fulltext_keywords'] = by_fulltext_keywords[b]['fulltext_keywords']
 
 # now that we have collected everything, we can flatten our map to a list
-publications = [all[b] for b in all.keys()]
+publications = [all_queries[b] for b in all_queries.keys()]
 publications.sort(key=lambda p: p['bibcode'])
 
 # exclude arXiv preprints
@@ -233,10 +237,21 @@ for p in publications:
 
 # make some content more amenable to humans and xslxwriter alike
 for p in publications:
-    list_value_columns = ['author', 'title', 'doi', 'keywords', 'page']
+    list_value_columns = ['author', 'title', 'doi', 'fulltext_keywords', 'keyword', 'page', 'aff']
     for c in list_value_columns:
         if c in p and p[c]:
-            p[c] = ', '.join(p[c])
+            p[c] = '; '.join(p[c]) if c == 'aff' else ', '.join(p[c])
+
+# add 1st author institution and SALT partner institutions
+for p in publications:
+    # p['number_of_SA_authors'] = p['aff'].count('South Africa')
+    partners = p['aff'].split('; ')
+    p['institute_of_1st_author'] = partners[0]
+    for partner in partners:
+        for salt_partner in config.SALT_PARTNERS:
+            if salt_partner in partner:
+                p['SALT_partners'] = salt_partner
+
 
 columns = spreadsheet_columns()
 send_mails([

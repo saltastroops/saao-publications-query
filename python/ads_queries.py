@@ -22,9 +22,12 @@ class ADSQueries:
                                                            to_date=to_date.strftime('%Y-%m'))
         self.fields = [
             'abstract',
+            'aff',
             'author',
             'bibcode',
+            'data',
             'doi',
+            'keyword',
             'page',
             'property',
             'pub',
@@ -59,7 +62,7 @@ class ADSQueries:
             bibcodes.extend([a.bibcode for a in list(query)])
         return bibcodes
 
-    def by_keywords(self, keywords):
+    def by_fulltext_keywords(self, keywords):
         """Query ADS for the publications containing any of a list of keywords.
 
         Aliases of the keywords (as determined by ADS) are included in the search.
@@ -82,9 +85,9 @@ class ADSQueries:
             query = ads.SearchQuery(q=q, fl=self.fields, fq='database:astronomy', max_pages=self.max_pages)
             for result in list(query):
                 if result.bibcode not in publications:
-                    publications[result.bibcode] = {f:getattr(result, f) for f in self.fields}
-                    publications[result.bibcode]['keywords'] = []
-                publications[result.bibcode]['keywords'].append(keyword)
+                    publications[result.bibcode] = {f: getattr(result, f) for f in self.fields}
+                    publications[result.bibcode]['fulltext_keywords'] = []
+                publications[result.bibcode]['fulltext_keywords'].append(keyword)
 
         return publications
 
@@ -112,7 +115,7 @@ class ADSQueries:
             query = ads.SearchQuery(q=q, fl=self.fields, fq='database:astronomy', max_pages=self.max_pages)
             for result in list(query):
                 if result.bibcode not in publications:
-                    publications[result.bibcode] = {f:getattr(result, f) for f in self.fields}
+                    publications[result.bibcode] = {f: getattr(result, f) for f in self.fields}
 
         return publications
 
@@ -120,7 +123,7 @@ class ADSQueries:
         """Query ADS for the publications with any of a list of affiliations.
 
         It is sufficient to give a substring of the affiliation; for example publications with 'South African
-        Astronomical Observatory' are found if 'South African Astronomical' is specified as affiliation.
+        Astronomical Observatory' are found if 'South African Astronomical Observatory' is specified as affiliation.
 
         Params:
         -------
@@ -136,12 +139,46 @@ class ADSQueries:
         publications = dict()
         for affiliation in affiliations:
             print('Searching for ' + affiliation)
-            q = 'aff:"{affiliation}" AND pubdate:{pubdate}'.format(affiliation=affiliation,
-                                                                           pubdate=self.pubdate)
+            q = 'aff:"{affiliation}" AND pubdate:{pubdate}'.format(affiliation=affiliation, pubdate=self.pubdate)
             query = ads.SearchQuery(q=q, fl=self.fields, fq='database:astronomy', max_pages=self.max_pages)
             for result in list(query):
                 if result.bibcode not in publications:
-                    publications[result.bibcode] = {f:getattr(result, f) for f in self.fields}
+                    publications[result.bibcode] = {f: getattr(result, f) for f in self.fields}
+
+        return publications
+
+    def by_institutions(self, institutions):
+        """Query ADS for the publications with any of a list of institutions.
+
+        It is sufficient to give an abbreviation string of the institution/affiliation listed here
+        https://github.com/adsabs/CanonicalAffiliations/blob/master/parent_child.tsv;
+
+        for example institutions with 'SAAO' are found if
+        'South African Astronomical Observatory/SAAO' is specified as an institution.
+
+        NB: It is crucial to stick to the names given there.
+
+        Params:
+        -------
+        institutions: list of str
+            The institutions to search for.
+
+        Returns:
+        --------
+        list of Publication
+            The publications with any of the institutions.
+        """
+
+        publications = dict()
+        for institution in institutions:
+            print('Searching for ' + institution)
+            q = 'institution:"{institution}" AND pubdate:{pubdate}'.format(
+                institution=institution, pubdate=self.pubdate
+            )
+            query = ads.SearchQuery(q=q, fl=self.fields, fq='database:astronomy', max_pages=self.max_pages)
+            for result in list(query):
+                if result.bibcode not in publications:
+                    publications[result.bibcode] = {f: getattr(result, f) for f in self.fields}
 
         return publications
 
@@ -165,9 +202,8 @@ class ADSQueries:
         try:
             query = ads.SearchQuery(bibcode=bibcode, fl=self.fields, max_pages=self.max_pages)
             details = list(query)[0]
-            return {f:getattr(details, f) for f in self.fields}
+            return {f: getattr(details, f) for f in self.fields}
         except:
-            details = {f:'' for f in self.fields}
+            details = {f: '' for f in self.fields}
             details['bibcode'] = bibcode
             return details
-

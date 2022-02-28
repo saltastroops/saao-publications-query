@@ -10,3 +10,8 @@ six==1.16.0
 urllib3==1.26.8
 Werkzeug==2.0.3
 XlsxWriter==3.0.2
+
+python-dotenv==0.17.1
+numpy==1.22.2
+pandas==1.4.1
+weasyprint==54.1
