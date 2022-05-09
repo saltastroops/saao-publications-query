@@ -122,8 +122,9 @@ class ADSQueries:
     def by_affiliations(self, affiliations):
         """Query ADS for the publications with any of a list of affiliations.
 
-        It is sufficient to give a substring of the affiliation; for example publications with 'South African
-        Astronomical Observatory' are found if 'South African Astronomical Observatory' is specified as affiliation.
+        Each affiliation must be in the list of affiliations used by the ADS
+        (https://github.com/adsabs/CanonicalAffiliations/blob/master/parent_child.tsv),
+        and its name must be given exactly as in that list.
 
         Params:
         -------
@@ -150,13 +151,9 @@ class ADSQueries:
     def by_institutions(self, institutions):
         """Query ADS for the publications with any of a list of institutions.
 
-        It is sufficient to give an abbreviation string of the institution/affiliation listed here
-        https://github.com/adsabs/CanonicalAffiliations/blob/master/parent_child.tsv;
-
-        for example institutions with 'SAAO' are found if
-        'South African Astronomical Observatory/SAAO' is specified as an institution.
-
-        NB: It is crucial to stick to the names given there.
+        Each institution must be in the list of affiliations used by the ADS
+        (https://github.com/adsabs/CanonicalAffiliations/blob/master/parent_child.tsv),
+        and its name must be given exactly as in that list.
 
         Params:
         -------

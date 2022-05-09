@@ -8,7 +8,7 @@ ADS_API_KEY = os.getenv('ADS_API_KEY')
 
 WOS_API_KEY = os.getenv('WOS_API_KEY')
 
-LIBRARIAN_EMAIL_ADDRESSES = os.getenv('LIBRARIAN_EMAIL_ADDRESSES')
+LIBRARIAN_EMAIL_ADDRESSES = os.getenv('LIBRARIAN_EMAIL_ADDRESSES').strip('][').split(', ')
 
 FROM_EMAIL_ADDRESS = os.getenv('FROM_EMAIL_ADDRESS')
 
@@ -28,9 +28,9 @@ AFFILIATIONS = [
     'South African Large Telescope'
 ]
 
-# Institutions to search for. It is sufficient to give an abbreviation string of the institution/affiliation listed
-# here: https://github.com/adsabs/CanonicalAffiliations/blob/master/parent_child.tsv.
-# NB: It is crucial to stick to the names given there.
+# Institutions to search for. Each institution must be in the list of affiliations used by the ADS
+# (https://github.com/adsabs/CanonicalAffiliations/blob/master/parent_child.tsv),
+# and its name must be given exactly as in that list.
 INSTITUTIONS = [
     'SAAO'
 ]

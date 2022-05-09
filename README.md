@@ -28,7 +28,7 @@ Finally, you need to add a configuration file, as explained in the following sec
 
 ## Configuration
 
-You need to create a file `python/config.py` and define the following constants in it.
+You need to create a file `.env` and define the following constants in it.
 
 | Constant | Description | Example |
 | -- | -- | -- |
@@ -44,18 +44,15 @@ The email addresses of the librarians should be given as *first name last name &
 
 The API key for ADS can be obtained from [https://ui.adsabs.harvard.edu/](https://ui.adsabs.harvard.edu/). You  need to log in, choose 'Customize Settings' from the Account menu and then select 'API Token' from the menu. The API key for Science Direct can be obtained from [http://dev.elsevier.com](http://dev.elsevier.com). 
 
-You shouldn't include the API keys in the configuration file, but rather set them by means of environment variables:
-
-```python
-import os
-ADS_API_KEY = os.environ['ADS_API_KEY']
-SCIENCE_DIRECT_API_KEY = os.environ['SCIENCE_DIRECT_API_KEY']
-```
+The environment variables should then be accessed from the configuration file.
 
 Here is an example of what the configuration file might look like.
 
 ```python
 import os
+
+ADS_API_KEY = os.environ['ADS_API_KEY']
+SCIENCE_DIRECT_API_KEY = os.environ['SCIENCE_DIRECT_API_KEY']
 
 # keywords to search for
 KEYWORDS = [
@@ -69,13 +66,16 @@ AUTHORS = {
     'Kniazev, A': 'Alexei Kniazev <akniazev@saao.ac.za~'
 }
 
+# affiliations
+AFFILIATIONS = [
+    'South African Large Telescope'
+]
+
 # email addresses of the librarians
 LIBRARIAN_EMAIL_ADDRESSES = [
     'Theresa de Young <theresa@saao.ac.za>',
     'Zuthobeke Mvakade <zm@saao.ac.za>'
 ]
-
-ADS_API_KEY = os.environ['ADS_API_KEY']
 ```
 
 ## Architecture
