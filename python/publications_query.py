@@ -7,18 +7,13 @@ import smtplib
 import sys
 import time
 import xlsxwriter
+import requests
+import json
 
 from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from selenium import webdriver
-from webdriver_manager.chrome import ChromeDriverManager
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.wait import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, NoSuchElementException, StaleElementReferenceException
-from selenium.webdriver.chrome.service import Service
 from bs4 import BeautifulSoup
 
 import config
@@ -226,60 +221,22 @@ publications = [p for p in publications if 'arXiv' not in p['bibcode']]
 excluded_journals = [journal.lower() for journal in config.EXCLUDED_JOURNALS]
 publications = [p for p in publications if p["pub"].lower() not in excluded_journals]
 
-
-# Option to initiate Chrome browser in Headless mode
-options = webdriver.ChromeOptions()
-options.headless = True
-
-# add URL to ADS page
+# query authors and affiliations
 retries = 0
 for i, p in enumerate(publications):
-    with webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options) as driver:
-        try:
-            driver.maximize_window()
-            wait = WebDriverWait(driver, 30, 3)
-            p['ads_url'] = 'https://ui.adsabs.harvard.edu/#abs/{0}/abstract'.format(p['bibcode'])
-            driver.get(p['ads_url'])
-            wait.until(EC.presence_of_element_located((By.ID, "dynamic-page-body")))
-            show_aff = False
-            show_all_authors = False
-            if driver.find_elements(By.ID, "toggle-aff"):
-                try:
-                    driver.find_element(By.ID, "toggle-aff").click()
-                    show_aff = wait.until(EC.text_to_be_present_in_element((By.ID, "toggle-aff"), "Hide affiliations"))
-                except (StaleElementReferenceException, NoSuchElementException):
-                    driver.find_element(By.ID, "toggle-aff").click()
-                    show_aff = wait.until(EC.text_to_be_present_in_element((By.ID, "toggle-aff"), "Hide affiliations"))
-            if driver.find_elements(By.ID, "toggle-more-authors"):
-                try:
-                    driver.find_element(By.ID, "toggle-more-authors").click()
-                    show_all_authors = wait.until(
-                        EC.text_to_be_present_in_element((By.ID, "toggle-more-authors"), "Hide authors")
-                    )
-                except (StaleElementReferenceException, NoSuchElementException):
-                    driver.find_element(By.ID, "toggle-more-authors").click()
-                    show_all_authors = wait.until(
-                        EC.text_to_be_present_in_element((By.ID, "toggle-more-authors"), "Hide authors")
-                    )
-            authors = []
-            affiliations = []
-            if show_aff or show_all_authors:
-                content = driver.page_source
-                soup = BeautifulSoup(content, features="lxml")
-                for el in soup.findAll('li', attrs={'class': 'author'}):
-                    name = el.find('a', href=True)
-                    aff = el.find('span', attrs={'class': 'affiliation'})
-                    aff_name = aff.find('i').text if aff is not None else None
-                    if name is not None:
-                        authors.append(name.text.strip())
-                    if aff_name is not None:
-                        affiliations.append(aff_name.strip())
+    p['ads_url'] = 'https://ui.adsabs.harvard.edu/#abs/{0}/abstract'.format(p['bibcode'])
+    query_url = 'https://ui.adsabs.harvard.edu/v1/search/query?' \
+                'fl=aff%2Cauthor&q=identifier%3A{0}&rows=1'.format(p['bibcode'].replace('&', '%26'))
 
-        except TimeoutException:
-            driver.refresh()
+    print(f'Querying authors and affiliations for publication {i + 1} of {len(publications)}')
+    response = requests.get(query_url, headers={'Authorization': 'Bearer ' + config.ADS_API_KEY})
+    soup = BeautifulSoup(response.text, 'html.parser')
 
-    p['author'] = ', '.join(authors)
-    p['aff'] = '| '.join(affiliations)
+    content = json.loads(soup.text)
+    query_result = content['response']['docs'][0]
+
+    p['author'] = ', '.join(query_result['author'])
+    p['aff'] = '| '.join(query_result['aff'])
 
 # check whether the DOI is indexed in the Web of Science (WoS)
 wos_queries = WoSQueries()
@@ -337,7 +294,6 @@ for p in publications:
     p['SA_institutions'] = '; '.join(list(institutions))
 
     p['SALT_partners'] = '; '.join(list(salt_partners))
-
 
 columns = spreadsheet_columns()
 send_mails([
