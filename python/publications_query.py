@@ -15,6 +15,7 @@ from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from bs4 import BeautifulSoup
+from urllib.parse import urlencode, quote
 
 import config
 from ads_queries import ADSQueries
@@ -221,22 +222,31 @@ publications = [p for p in publications if 'arXiv' not in p['bibcode']]
 excluded_journals = [journal.lower() for journal in config.EXCLUDED_JOURNALS]
 publications = [p for p in publications if p["pub"].lower() not in excluded_journals]
 
+authors = []
+affiliations = []
+
 # query authors and affiliations
 retries = 0
 for i, p in enumerate(publications):
     p['ads_url'] = 'https://ui.adsabs.harvard.edu/#abs/{0}/abstract'.format(p['bibcode'])
-    query_url = 'https://ui.adsabs.harvard.edu/v1/search/query?' \
-                'fl=aff%2Cauthor&q=identifier%3A{0}&rows=1'.format(p['bibcode'].replace('&', '%26'))
+    url_template = 'https://ui.adsabs.harvard.edu/v1/search/query?{}'
+    query_params = {'fl': 'aff, author', 'q': 'identifier:{0}'.format(p['bibcode']), 'rows': 1}
+    query_url = url_template.format(urlencode(query_params, quote_via=quote))
+    try:
+        print(f'Querying authors and affiliations for publication {i + 1} of {len(publications)}')
+        response = requests.get(query_url, headers={'Authorization': 'Bearer ' + config.ADS_API_KEY})
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, 'html.parser')
+        content = json.loads(soup.text)
+        query_result = content['response']['docs'][0]
 
-    print(f'Querying authors and affiliations for publication {i + 1} of {len(publications)}')
-    response = requests.get(query_url, headers={'Authorization': 'Bearer ' + config.ADS_API_KEY})
-    soup = BeautifulSoup(response.text, 'html.parser')
+        authors.append(query_result['author'])
+        affiliations.append(query_result['aff'])
 
-    content = json.loads(soup.text)
-    query_result = content['response']['docs'][0]
-
-    p['author'] = ', '.join(query_result['author'])
-    p['aff'] = '| '.join(query_result['aff'])
+        p['author'] = ', '.join(query_result['author'])
+        p['aff'] = '| '.join(query_result['aff'])
+    except requests.exceptions.HTTPError as err:
+        print(err)
 
 # check whether the DOI is indexed in the Web of Science (WoS)
 wos_queries = WoSQueries()
@@ -259,20 +269,22 @@ for p in publications:
         if c in p and p[c]:
             p[c] = ', '.join(p[c])
 
-for p in publications:
-    partners = p['aff'].split('| ')
-    authors = p['author'].split(', ')
+for i, p in enumerate(publications):
+    authors_ = authors[i]
+    partners_ = affiliations[i]
 
     # No. of authors on paper affiliated to a SA institution
-    p['no_of_authors_aff_to_SA_ins'] = sum("South Africa" in partner for partner in partners)
+    p['no_of_authors_aff_to_SA_ins'] = sum("South Africa" in partner for partner in partners_)
 
     # 1st author institution and SALT partner institutions
-    p['institute_of_1st_author'] = partners[0]
+    p['institute_of_1st_author'] = partners_[0]
+
     saao_authors = []
     institutions = []
     salt_partners = []
-    for i, partner in enumerate(partners):
-        for ins in partner.split('; '):
+    for j, partner in enumerate(partners_):
+        for k, ins in enumerate(partner.split('; ')):
+
             # add South African institutions
             if "South Africa" in ins:
                 institutions.append(ins)
@@ -283,7 +295,7 @@ for p in publications:
 
             saao_ins = ["SAAO", "South African Astronomical Observatory", "SALT", "South African Large Telescope"]
             if any(institution in ins for institution in saao_ins):
-                saao_authors.append(authors[i])
+                saao_authors.append(authors_[j])
 
     saao_authors = set(saao_authors)
     institutions = set(institutions)
