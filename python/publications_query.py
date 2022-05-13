@@ -124,7 +124,7 @@ def spreadsheet_columns():
     columns['record_type'] = 'Record Type'
     columns['publication_number'] = 'Doc/Publication Number'
     columns['author'] = 'Responsibility'
-    columns['institute_of_1st_author'] = 'Institute of first author'
+    columns['institute_of_first_author'] = 'Institute of first author'
     columns['title'] = 'Title'
     columns['pub'] = 'Journal'
     columns['pubdate'] = 'Publication date (YYYY-MM-DD)'
@@ -188,6 +188,140 @@ def send_mails(spreadsheets, columns):
         s.sendmail(config.FROM_EMAIL_ADDRESS, ', '.join(config.LIBRARIAN_EMAIL_ADDRESSES), outer.as_string())
 
 
+def get_authors_and_affiliations(publication):
+    """Return lists of authors and affiliations of a given publication
+
+    Params:
+    -------
+    publication: publication dictionary
+
+    Returns:
+    --------
+    lists:
+        Lists of authors and affiliations.
+    """
+    # query authors and affiliations
+    url_template = 'https://ui.adsabs.harvard.edu/v1/search/query?{}'
+    query_params = {'fl': 'aff, author', 'q': 'identifier:{0}'.format(publication['bibcode']), 'rows': 1}
+    query_url = url_template.format(urlencode(query_params, quote_via=quote))
+
+    response = requests.get(query_url, headers={'Authorization': 'Bearer ' + config.ADS_API_KEY})
+    response.raise_for_status()
+    soup = BeautifulSoup(response.text, 'html.parser')
+    content = json.loads(soup.text)
+    query_result = content['response']['docs'][0]
+
+    publication['author'] = ', '.join(query_result['author'])
+    publication['aff'] = '| '.join(query_result['aff'])
+
+    return query_result['author'], query_result['aff']
+
+
+def check_doi_index_in_wos(publication):
+    # check whether the DOI is indexed in the Web of Science (WoS)
+    doi = publication['doi'][0] if publication['doi'] and len(publication['doi']) > 0 else None
+    publication['doi_in_wos'] = wos_queries.is_doi_indexed(doi).value
+
+    # avoid HTTP 429 Too Many Requests errors
+    time.sleep(1)
+
+
+def get_south_african_affiliations(affiliation):
+    """Return string of South African institutions in a publication
+
+    Params:
+    -------
+    affiliation: list of affiliations in a publication
+
+    Returns:
+    --------
+    str:
+        South African institutions separated by '|'.
+    """
+    south_african_affiliations = ''
+    for k, ins in enumerate(affiliation.split('; ')):
+        # add South African institutions
+        if "South Africa" in ins:
+            south_african_affiliations += '| ' + ins if k > 0 else ins
+    return south_african_affiliations
+
+
+def get_salt_partners(affiliation):
+    """Return string of South African Large Telescope (SALT) partner institutions in a publication
+
+    Params:
+    -------
+    affiliation: list of affiliations in a publication
+
+    Returns:
+    --------
+    str:
+        SALT partner institutions separated by '|'.
+    """
+    salt_partners = ''
+    for k, ins in enumerate(affiliation.split('; ')):
+        # add SALT partner institutions
+        if any(partner in ins for partner in config.SALT_PARTNERS):
+            salt_partners += '| ' + ins if k > 0 else ins
+
+    return salt_partners
+
+
+def get_saao_authors(affiliation, authors):
+    """Return string of authors affiliated South African institutions
+
+    Params:
+    -------
+    affiliation: list of affiliations in a publication
+
+    Returns:
+    --------
+    str:
+        authors affiliated South African institutions separated by '|'.
+    """
+    saao_authors = ''
+    for k, ins in enumerate(affiliation.split('; ')):
+        # only authors within the SAOO would have SALT as an affiliation
+        saao_ins = ["SAAO", "South African Astronomical Observatory"]
+        if any(institution in ins for institution in saao_ins):
+            saao_authors += '| ' + authors[j] if k > 0 else authors[j]
+    return saao_authors
+
+
+def count_authors_affiliated_to_sa_ins(affiliations, authors):
+    """Return counts of authors affiliated South African institutions
+
+    Params:
+    -------
+    affiliations: list of affiliations in a publication
+    authors: list of authors in a publication
+
+    Returns:
+    --------
+    int:
+        counts of authors affiliated South African institutions
+    """
+    authors_aff_to_sa_inst = ''
+    for affiliation in affiliations:
+        for k, ins in enumerate(affiliation.split('; ')):
+            if "South Africa" in affiliation:
+                authors_aff_to_sa_inst += '| ' + authors[k] if k > 0 else authors[k]
+
+    authors_list = set(authors_aff_to_sa_inst.split('| '))
+
+    # removes all empty elements
+    authors_list_filtered = list(filter(None, list(authors_list)))
+    return len(authors_list_filtered)
+
+
+def modify_list_contents(publication):
+    # make some content more amenable to humans and xslxwriter alike
+    list_value_columns = ['title', 'doi', 'fulltext_keywords', 'keyword', 'page']
+    for c in list_value_columns:
+        if c in publication and publication[c]:
+            publication[c] = ', '.join(publication[c])
+
+
 # By default, the start date is the current date, but you can pass a date on the command
 # line instead.
 if len(sys.argv) > 1:
@@ -222,92 +356,60 @@ publications = [p for p in publications if 'arXiv' not in p['bibcode']]
 excluded_journals = [journal.lower() for journal in config.EXCLUDED_JOURNALS]
 publications = [p for p in publications if p["pub"].lower() not in excluded_journals]
 
-authors = []
-affiliations = []
-
-# query authors and affiliations
-retries = 0
-for i, p in enumerate(publications):
-    p['ads_url'] = 'https://ui.adsabs.harvard.edu/#abs/{0}/abstract'.format(p['bibcode'])
-    url_template = 'https://ui.adsabs.harvard.edu/v1/search/query?{}'
-    query_params = {'fl': 'aff, author', 'q': 'identifier:{0}'.format(p['bibcode']), 'rows': 1}
-    query_url = url_template.format(urlencode(query_params, quote_via=quote))
-    try:
-        print(f'Querying authors and affiliations for publication {i + 1} of {len(publications)}')
-        response = requests.get(query_url, headers={'Authorization': 'Bearer ' + config.ADS_API_KEY})
-        response.raise_for_status()
-        soup = BeautifulSoup(response.text, 'html.parser')
-        content = json.loads(soup.text)
-        query_result = content['response']['docs'][0]
-
-        authors.append(query_result['author'])
-        affiliations.append(query_result['aff'])
-
-        p['author'] = ', '.join(query_result['author'])
-        p['aff'] = '| '.join(query_result['aff'])
-    except requests.exceptions.HTTPError as err:
-        print(err)
-
-# check whether the DOI is indexed in the Web of Science (WoS)
 wos_queries = WoSQueries()
-for i, p in enumerate(publications):
-    print(f'Querying WoS for publication {i + 1} of {len(publications)}')
-    doi = p['doi'][0] if p['doi'] and len(p['doi']) > 0 else None
-    p['doi_in_wos'] = wos_queries.is_doi_indexed(doi).value
+try:
+    for i, p in enumerate(publications):
+        # add refereed status
+        p['refereed'] = p['property'] and 'REFEREED' in p['property']
 
-    # avoid HTTP 429 Too Many Requests errors
-    time.sleep(1)
+        # add ADS url
+        p['ads_url'] = 'https://ui.adsabs.harvard.edu/#abs/{0}/abstract'.format(p['bibcode'])
 
-# add refereed status
-for p in publications:
-    p['refereed'] = p['property'] and 'REFEREED' in p['property']
+        print(f'Querying authors and affiliations for publication {i + 1} of {len(publications)}')
+        authors, affiliations = get_authors_and_affiliations(p)
 
-# make some content more amenable to humans and xslxwriter alike
-for p in publications:
-    list_value_columns = ['title', 'doi', 'fulltext_keywords', 'keyword', 'page']
-    for c in list_value_columns:
-        if c in p and p[c]:
-            p[c] = ', '.join(p[c])
+        # No. of authors on paper affiliated to a SA institution
+        p['no_of_authors_aff_to_SA_ins'] = count_authors_affiliated_to_sa_ins(affiliations, authors)
 
-for i, p in enumerate(publications):
-    authors_ = authors[i]
-    partners_ = affiliations[i]
+        # 1st author institution and SALT partner institutions
+        p['institute_of_first_author'] = affiliations[0]
 
-    # No. of authors on paper affiliated to a SA institution
-    p['no_of_authors_aff_to_SA_ins'] = sum("South Africa" in partner for partner in partners_)
+        saao_authors = []
+        south_african_affiliations = []
+        salt_partners = []
+        for j, affiliation in enumerate(affiliations):
 
-    # 1st author institution and SALT partner institutions
-    p['institute_of_1st_author'] = partners_[0]
+            if get_south_african_affiliations(affiliation) != '':
+                for aff in get_south_african_affiliations(affiliation).split('| '):
+                    south_african_affiliations.append(aff)
+            if get_saao_authors(affiliation, authors) != '':
+                for author in get_saao_authors(affiliation, authors).split('| '):
+                    saao_authors.append(author)
+            if get_salt_partners(affiliation) != '':
+                for partner in get_salt_partners(affiliation).split('| '):
+                    salt_partners.append(partner)
 
-    saao_authors = []
-    institutions = []
-    salt_partners = []
-    for j, partner in enumerate(partners_):
-        for k, ins in enumerate(partner.split('; ')):
+        # get unique list entries
+        saao_authors = set(saao_authors)
+        south_african_affiliations = set(south_african_affiliations)
+        salt_partners = set(salt_partners)
 
-            # add South African institutions
-            if "South Africa" in ins:
-                institutions.append(ins)
+        # removes all empty elements from the list
+        p['authors_affiliated_with_SAAO'] = '; '.join(filter(None, list(saao_authors)))
 
-            # add SALT partner institutions
-            if any(p in ins for p in config.SALT_PARTNERS):
-                salt_partners.append(ins)
+        p['SA_institutions'] = '; '.join(filter(None, list(south_african_affiliations)))
 
-            saao_ins = ["SAAO", "South African Astronomical Observatory", "SALT", "South African Large Telescope"]
-            if any(institution in ins for institution in saao_ins):
-                saao_authors.append(authors_[j])
+        p['SALT_partners'] = '; '.join(filter(None, list(salt_partners)))
 
-    saao_authors = set(saao_authors)
-    institutions = set(institutions)
-    salt_partners = set(salt_partners)
+        print(f'Querying WoS for publication {i + 1} of {len(publications)}')
+        check_doi_index_in_wos(p)
 
-    p['authors_affiliated_with_SAAO'] = ', '.join(list(saao_authors))
+        modify_list_contents(p)
 
-    p['SA_institutions'] = '; '.join(list(institutions))
-
-    p['SALT_partners'] = '; '.join(list(salt_partners))
-
-columns = spreadsheet_columns()
-send_mails([
-    dict(name='all.xlsx', content=publications_spreadsheet(publications, columns.keys()))
-], columns)
+    print(f'Sending email to librarians...')
+    columns = spreadsheet_columns()
+    send_mails([
+        dict(name='all.xlsx', content=publications_spreadsheet(publications, columns.keys()))
+    ], columns)
+except requests.exceptions.HTTPError as err:
+    print(err)
