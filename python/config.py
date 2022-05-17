@@ -14,8 +14,55 @@ FROM_EMAIL_ADDRESS = os.getenv('FROM_EMAIL_ADDRESS')
 
 # keywords to search for
 KEYWORDS = [
+    'SAAO',
+    'SALT',
+    'South African Astronomical Observatory',
+    'Southern African Large Telescope',
+    'African Large Telescope',
+    'African Astronomical Observatory',
+    'IRSF',
+    'MONET',
+    'BiSON',
+    'SuperWASP',
     'KELT',
-    'Infrared Survey'
+    'LCOGT SAAO',
+    'LCOGT Sutherland',
+    'KMTNeT',
+    'MASTER SAAO',
+    'MASTER',
+    'Meerlicht',
+    'Solaris',
+    'Infrared Survey Facility',
+    'Las Cumbres Observatory Global Telescope',
+    'SHOC',
+    'Sutherland high-speed optical camera',
+    'HIPPO',
+    'SpCCD',
+    'WALOP',
+    'ste3',
+    'ste4',
+    'salticam',
+    'maxiE',
+    'robopol',
+    'ATLAS',
+    'ATLAS-SOUTH',
+    'PRIME',
+    'ASTMON',
+    'SANSA/DLR/SMARTNet',
+    'ACT/APT',
+    'Asteroid Terrestrial Impact Last Alert System',
+    'WFTC II',
+    'Wide Field Cryogenic Telescope',
+    'OCR',
+    'Optical Space Research',
+    'ASAS-SN',
+    'Allsky Automated Survey for Supernovae',
+    'Xamidimura',
+    'SAGOS',
+    'South African Geodynamic Observatory',
+    'ASTMON',
+    'PRIME',
+    'PRime Focus Infrared Microlensing Experiment'
 ]
 
 # authors to search for and their email addresses
@@ -25,7 +72,8 @@ AUTHORS = {
 }
 
 AFFILIATIONS = [
-    'South African Large Telescope'
+    'South African Astronomical Observatory',
+    'Southern African Large Telescope'
 ]
 
 # Institutions to search for. Each institution must be in the list of affiliations used by the ADS
@@ -47,4 +95,21 @@ SALT_PARTNERS = [
     'Durham University'
 ]
 
-EXCLUDED_JOURNALS = ['']
+EXCLUDED_JOURNALS = [
+    "Advances in space research",
+    "Dynamics of atmospheres and oceans",
+    "Earth and planetary science letters",
+    "Geochimica et Cosmochimica Acta",
+    "Geophysical research letters",
+    "International journal of astrobiology",
+    "Journal of Advances in Modeling Earth Systems",
+    "Journal of geophysical research",
+    "Journal of geophysical research (planets)",
+    "Journal of geophysical research (space physics)",
+    "Journal of high energy physics",
+    "Life sciences and space research",
+    "LPI Contributions",
+    "Physics of the earth and planetary interiors",
+    "The planetary science journal",
+    "Space science reviews",
+]
