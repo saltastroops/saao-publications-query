@@ -25,13 +25,13 @@ from wos_queries import WoSQueries
 def ignore_tmp_bibcodes(bibcodes):
     """Filter out bibcodes which are temporary.
 
-    Params:
+    Params
     -------
-    bibcodes: list of str
+    bibcodes : list of str
         Bibcodes to filter.
 
-    Returns:
-    --------
+    Returns
+    -------
     list of str
         List of bibcodes lswithout the temporary ones.
     """
@@ -46,8 +46,8 @@ def previously_found_bibcodes():
     the configuration file. If this file doesn't exist, it is created first. If it cannot be created, an exception is
     raised.
 
-    Returns:
-    --------
+    Returns
+    -------
     list
         List of publications found in a previous search.
     """
@@ -78,16 +78,16 @@ def _ensure_previously_recorded_file_exists():
 def publications_spreadsheet(publications, columns):
     """Create a spreadsheet with the publications.
 
-    Params:
-    -------
-    publications: list
+    Params
+    ------
+    publications : list
         Publications.
-    columns: list of str
+    columns : list of str
         Columns to include in the spreadsheet.
 
-    Returns:
-    --------
-    io.BytesIO:
+    Returns
+    -------
+    io.BytesIO
         Spreadsheet with the publication details.
 
     """
@@ -115,9 +115,9 @@ def spreadsheet_columns():
 
     Some keys may not be included in a publication dictionary.
 
-    Returns:
-    --------
-    collections.OrderedDict:
+    Returns
+    -------
+    collections.OrderedDict
         Dictionary of column keys and names.
     """
     columns = collections.OrderedDict()
@@ -191,13 +191,13 @@ def send_mails(spreadsheets, columns):
 def get_authors_and_affiliations(publication):
     """Return lists of authors and affiliations of a given publication.
 
-    Params:
-    -------
+    Params
+    ------
     publication: publication dictionary
 
-    Returns:
-    --------
-    lists:
+    Returns
+    -------
+    lists
         Lists of authors and affiliations.
     """
     # query authors and affiliations
@@ -237,13 +237,13 @@ def check_doi_indexed_in_wos(publication):
 def get_south_african_affiliations(affiliations):
     """Return string of South African institutions in a publication.
 
-    Params:
-    -------
-    affiliations: list of affiliations in a publication separated by a semicolon
+    Params
+    ------
+    affiliations : list of affiliations in a publication separated by a semicolon
 
-    Returns:
-    --------
-    str:
+    Returns
+    -------
+    str
         South African institutions separated by '|'.
     """
     south_african_affiliations = []
@@ -257,13 +257,13 @@ def get_south_african_affiliations(affiliations):
 def get_salt_partners(affiliations):
     """Return string of South African Large Telescope (SALT) partner institutions in a publication.
 
-    Params:
-    -------
-    affiliations: list of affiliations in a publication separated by a semicolon
+    Params
+    ------
+    affiliations : list of affiliations in a publication separated by a semicolon
 
-    Returns:
-    --------
-    str:
+    Returns
+    -------
+    str
         SALT partner institutions separated by '|'.
     """
     salt_partners = []
@@ -278,13 +278,13 @@ def get_salt_partners(affiliations):
 def get_saao_authors(affiliations, authors):
     """Return string of authors affiliated South African institutions.
 
-    Params:
-    -------
-    affiliations: list of affiliations in a publication separated by a semicolon
+    Params
+    ------
+    affiliations : list of affiliations in a publication separated by a semicolon
 
-    Returns:
-    --------
-    str:
+    Returns
+    -------
+    str
         authors affiliated South African institutions separated by '|'.
     """
     saao_authors = []
@@ -299,14 +299,14 @@ def get_saao_authors(affiliations, authors):
 def count_authors_affiliated_to_sa_ins(affiliations, authors):
     """Return counts of authors affiliated South African institutions.
 
-    Params:
-    -------
-    affiliations: list of affiliations in a publication separated by a semicolon
-    authors: list of authors in a publication
+    Params
+    ------
+    affiliations : list of affiliations in a publication separated by a semicolon
+    authors : list of authors in a publication
 
-    Returns:
-    --------
-    int:
+    Returns
+    -------
+    int
         counts of authors affiliated South African institutions
     """
     authors_aff_to_sa_inst = []

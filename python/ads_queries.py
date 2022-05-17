@@ -8,11 +8,11 @@ class ADSQueries:
 
     Publications with a temporary bibcode are ignored for all queries.
 
-    Params:
-    -------
-    from_date: datetime.date
+    Params
+    ------
+    from_date : datetime.date
         Earliest date for which publications should be queried. Only the year and month are relevant.
-    to_date: datetime.date
+    to_date : datetime.date
         Latest date for which publications should be queried. Only the year and month are relevant.
     """
 
@@ -57,14 +57,14 @@ class ADSQueries:
         Contrary to the other query methods in this class a list of bibcodes is returned, as otherwise tons of
         essentially useless data would be requested (given that only a tiny minority of articles will be relevant).
 
-        Params:
-        -------
-        journals: list of str
+        Params
+        ------
+        journals : list of str
             The list of journals to query. The abbreviation used in ADS bibcodes must be used for the journals. For
             example, Monthly Notices and Astronomy & Astrophysics would be specified as 'MNRAS' and 'A&A'.
 
-        Returns:
-        --------
+        Returns
+        -------
         list of str
             The bibcodes of publications published in any of the journals.
         """
@@ -97,13 +97,13 @@ class ADSQueries:
 
         Aliases of the keywords (as determined by ADS) are included in the search.
 
-        Params:
-        -------
-        keywords: list of str
+        Params
+        ------
+        keywords : list of str
             The list of keywords to search for.
 
-        Returns:
-        --------
+        Returns
+        -------
         list of Publication
             The publications containing any of the keywords (or their synonyms).
         """
@@ -137,13 +137,13 @@ class ADSQueries:
         The authors should be specified in the form last_name, first_name other_initials (such as 'Potter, Stephen' or
         'Potter, Stephen B'). See http://adsabs.github.io/help/search/search-syntax for more details.
 
-        Params:
-        -------
-        authors: list of str
+        Params
+        ------
+        authors : list of str
              The list of authors to search for.
 
-        Returns:
-        --------
+        Returns
+        -------
         list of Publication
             The publications containing any of the authors.
         """
@@ -178,13 +178,13 @@ class ADSQueries:
         (https://github.com/adsabs/CanonicalAffiliations/blob/master/parent_child.tsv),
         and its name must be given exactly as in that list.
 
-        Params:
-        -------
-        affiliations: list of str
+        Params
+        ------
+        affiliations : list of str
             The affiliations to search for.
 
-        Returns:
-        --------
+        Returns
+        -------
         list of Publication
             The publications with any of the affiliations.
         """
@@ -221,13 +221,13 @@ class ADSQueries:
         (https://github.com/adsabs/CanonicalAffiliations/blob/master/parent_child.tsv),
         and its name must be given exactly as in that list.
 
-        Params:
-        -------
-        institutions: list of str
+        Params
+        ------
+        institutions : list of str
             The institutions to search for.
 
-        Returns:
-        --------
+        Returns
+        -------
         list of Publication
             The publications with any of the institutions.
         """
@@ -244,13 +244,13 @@ class ADSQueries:
         The full details are the list of fields defined in self.fields. They are returned as a dictionary. If the query
         fails, empty strings are returned for all the fields (with the exception of the bibcode).
 
-        Params:
-        -------
-        bibcode: str
+        Params
+        ------
+        bibcode : str
             The bibcode.
 
-        Returns:
-        --------
+        Returns
+        -------
         dict
             The full details.
         """
