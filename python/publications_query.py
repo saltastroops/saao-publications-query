@@ -185,7 +185,7 @@ def send_mails(spreadsheets, columns):
         outer.attach(msg)
 
     with smtplib.SMTP('smtp.saao.ac.za') as s:
-        s.sendmail(config.FROM_EMAIL_ADDRESS, ', '.join(config.LIBRARIAN_EMAIL_ADDRESSES), outer.as_string())
+        s.sendmail(config.FROM_EMAIL_ADDRESS, config.LIBRARIAN_EMAIL_ADDRESSES, outer.as_string())
 
 
 def get_authors_and_affiliations(publication):
