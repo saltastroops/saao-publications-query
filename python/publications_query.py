@@ -189,7 +189,7 @@ def send_mails(spreadsheets, columns):
 
 
 def get_authors_and_affiliations(publication):
-    """Return lists of authors and affiliations of a given publication
+    """Return lists of authors and affiliations of a given publication.
 
     Params:
     -------
@@ -228,83 +228,80 @@ def get_authors_and_affiliations(publication):
     return query_result['author'], query_result['aff']
 
 
-def check_doi_index_in_wos(publication):
+def check_doi_indexed_in_wos(publication):
     # check whether the DOI is indexed in the Web of Science (WoS)
     doi = publication['doi'][0] if publication['doi'] and len(publication['doi']) > 0 else None
     publication['doi_in_wos'] = wos_queries.is_doi_indexed(doi).value
 
-    # avoid HTTP 429 Too Many Requests errors
-    time.sleep(1)
 
-
-def get_south_african_affiliations(affiliation):
-    """Return string of South African institutions in a publication
+def get_south_african_affiliations(affiliations):
+    """Return string of South African institutions in a publication.
 
     Params:
     -------
-    affiliation: list of affiliations in a publication
+    affiliations: list of affiliations in a publication separated by a semicolon
 
     Returns:
     --------
     str:
         South African institutions separated by '|'.
     """
-    south_african_affiliations = ''
-    for k, ins in enumerate(affiliation.split('; ')):
+    south_african_affiliations = []
+    for k, affiliation in enumerate(affiliations.split('; ')):
         # add South African institutions
-        if "South Africa" in ins:
-            south_african_affiliations += '| ' + ins if k > 0 else ins
+        if "South Africa" in affiliation:
+            south_african_affiliations.append(affiliation)
     return south_african_affiliations
 
 
-def get_salt_partners(affiliation):
-    """Return string of South African Large Telescope (SALT) partner institutions in a publication
+def get_salt_partners(affiliations):
+    """Return string of South African Large Telescope (SALT) partner institutions in a publication.
 
     Params:
     -------
-    affiliation: list of affiliations in a publication
+    affiliations: list of affiliations in a publication separated by a semicolon
 
     Returns:
     --------
     str:
         SALT partner institutions separated by '|'.
     """
-    salt_partners = ''
-    for k, ins in enumerate(affiliation.split('; ')):
+    salt_partners = []
+    for k, affiliation in enumerate(affiliations.split('; ')):
         # add SALT partner institutions
-        if any(partner in ins for partner in config.SALT_PARTNERS):
-            salt_partners += '| ' + ins if k > 0 else ins
+        if any(partner in affiliation for partner in config.SALT_PARTNERS):
+            salt_partners.append(affiliation)
 
-    return salt_partners
+    return set(salt_partners)
 
 
-def get_saao_authors(affiliation, authors):
-    """Return string of authors affiliated South African institutions
+def get_saao_authors(affiliations, authors):
+    """Return string of authors affiliated South African institutions.
 
     Params:
     -------
-    affiliation: list of affiliations in a publication
+    affiliations: list of affiliations in a publication separated by a semicolon
 
     Returns:
     --------
     str:
         authors affiliated South African institutions separated by '|'.
     """
-    saao_authors = ''
-    for k, ins in enumerate(affiliation.split('; ')):
+    saao_authors = []
+    for k, affiliation in enumerate(affiliations.split('; ')):
         # only authors within the SAOO would have SALT as an affiliation
         saao_ins = ["SAAO", "South African Astronomical Observatory"]
-        if any(institution in ins for institution in saao_ins):
-            saao_authors += '| ' + authors[j] if k > 0 else authors[j]
-    return saao_authors
+        if any(institution in affiliation for institution in saao_ins):
+            saao_authors.append(authors[j])
+    return set(saao_authors)
 
 
 def count_authors_affiliated_to_sa_ins(affiliations, authors):
-    """Return counts of authors affiliated South African institutions
+    """Return counts of authors affiliated South African institutions.
 
     Params:
     -------
-    affiliations: list of affiliations in a publication
+    affiliations: list of affiliations in a publication separated by a semicolon
     authors: list of authors in a publication
 
     Returns:
@@ -312,16 +309,16 @@ def count_authors_affiliated_to_sa_ins(affiliations, authors):
     int:
         counts of authors affiliated South African institutions
     """
-    authors_aff_to_sa_inst = ''
+    authors_aff_to_sa_inst = []
     for affiliation in affiliations:
         for k, ins in enumerate(affiliation.split('; ')):
             if "South Africa" in affiliation:
-                authors_aff_to_sa_inst += '| ' + authors[k] if k > 0 else authors[k]
+                authors_aff_to_sa_inst.append(authors[k])
 
-    authors_list = set(authors_aff_to_sa_inst.split('| '))
+    authors_list = set(authors_aff_to_sa_inst)
 
     # removes all empty elements
-    authors_list_filtered = list(filter(None, list(authors_list)))
+    authors_list_filtered = list(authors_list)
     return len(authors_list_filtered)
 
 
@@ -382,7 +379,7 @@ try:
         # No. of authors on paper affiliated to a SA institution
         p['no_of_authors_aff_to_SA_ins'] = count_authors_affiliated_to_sa_ins(affiliations, authors)
 
-        # 1st author institution and SALT partner institutions
+        # First author institution and SALT partner institutions
         p['institute_of_first_author'] = affiliations[0]
 
         saao_authors = []
@@ -390,14 +387,14 @@ try:
         salt_partners = []
         for j, affiliation in enumerate(affiliations):
 
-            if get_south_african_affiliations(affiliation) != '':
-                for aff in get_south_african_affiliations(affiliation).split('| '):
+            if len(get_south_african_affiliations(affiliation)) > 0:
+                for aff in get_south_african_affiliations(affiliation):
                     south_african_affiliations.append(aff)
-            if get_saao_authors(affiliation, authors) != '':
-                for author in get_saao_authors(affiliation, authors).split('| '):
+            if len(get_saao_authors(affiliation, authors)) > 0:
+                for author in get_saao_authors(affiliation, authors):
                     saao_authors.append(author)
-            if get_salt_partners(affiliation) != '':
-                for partner in get_salt_partners(affiliation).split('| '):
+            if len(get_salt_partners(affiliation)) > 0:
+                for partner in get_salt_partners(affiliation):
                     salt_partners.append(partner)
 
         # get unique list entries
@@ -406,14 +403,16 @@ try:
         salt_partners = set(salt_partners)
 
         # removes all empty elements from the list
-        p['authors_affiliated_with_SAAO'] = '; '.join(filter(None, list(saao_authors)))
+        p['authors_affiliated_with_SAAO'] = '; '.join(saao_authors)
 
-        p['SA_institutions'] = '; '.join(filter(None, list(south_african_affiliations)))
+        p['SA_institutions'] = '; '.join(south_african_affiliations)
 
-        p['SALT_partners'] = '; '.join(filter(None, list(salt_partners)))
+        p['SALT_partners'] = '; '.join(salt_partners)
 
         print(f'Querying WoS for publication {i + 1} of {len(publications)}')
-        check_doi_index_in_wos(p)
+        check_doi_indexed_in_wos(p)
+        # avoid HTTP 429 Too Many Requests errors
+        time.sleep(1)
 
         modify_list_contents(p)
 

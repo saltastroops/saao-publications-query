@@ -51,7 +51,6 @@ class ADSQueries:
                 if retries > self.max_retries:
                     raise
 
-
     def by_journals(self, journals):
         """Query ADS for the publications published in any of a list of journals.
 
@@ -92,7 +91,6 @@ class ADSQueries:
                 print("Retrying...")
                 if retries > self.max_retries:
                     raise
-
 
     def by_fulltext_keywords(self, keywords):
         """Query ADS for the publications containing any of a list of keywords.
