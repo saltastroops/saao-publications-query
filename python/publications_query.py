@@ -155,7 +155,7 @@ def send_mails(spreadsheets, columns):
 
     outer = MIMEMultipart()
     outer['Subject'] = 'Publications Query Results'
-    outer['To'] = json.loads(config.LIBRARIAN_EMAIL_ADDRESSES)
+    outer['To'] = config.LIBRARIAN_EMAIL_ADDRESSES
     outer['From'] = config.FROM_EMAIL_ADDRESS
     outer.preamble = 'You will not see this in a MIME-aware mail reader.\n'
 
@@ -292,7 +292,7 @@ def get_saao_authors(affiliations, authors):
         # only authors within the SAOO would have SALT as an affiliation
         saao_ins = ["SAAO", "South African Astronomical Observatory"]
         if any(institution in affiliation for institution in saao_ins):
-            saao_authors.add(authors[j])
+            saao_authors.add(authors[k])
     return saao_authors
 
 
@@ -315,7 +315,7 @@ def count_authors_affiliated_to_sa_ins(affiliations, authors):
             if "South Africa" in affiliation:
                 authors_aff_to_sa_inst.add(authors[k])
 
-    return authors_aff_to_sa_inst
+    return len(authors_aff_to_sa_inst)
 
 
 def modify_list_contents(publication):
