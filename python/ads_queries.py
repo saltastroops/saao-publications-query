@@ -36,6 +36,21 @@ class ADSQueries:
             'volume'
         ]
         self.max_pages = max_pages
+        self.max_retries = 5
+
+    def _by_journal(self, journal):
+        retries = 0
+        while retries <= self.max_retries:
+            try:
+                q = 'bibstem:{journal} AND pubdate:{pubdate}'.format(journal=journal, pubdate=self.pubdate)
+                query = ads.SearchQuery(q=q, fl=['bibcode'], max_pages=self.max_pages)
+                return [a.bibcode for a in list(query)]
+            except ads.exceptions.APIResponseError:
+                retries += 1
+                print("Retrying...")
+                if retries > self.max_retries:
+                    raise
+
 
     def by_journals(self, journals):
         """Query ADS for the publications published in any of a list of journals.
@@ -57,10 +72,27 @@ class ADSQueries:
 
         bibcodes = []
         for journal in journals:
-            q = 'bibstem:{journal} AND pubdate:{pubdate}'.format(journal=journal, pubdate=self.pubdate)
-            query = ads.SearchQuery(q=q, fl=['bibcode'], max_pages=self.max_pages)
-            bibcodes.extend([a.bibcode for a in list(query)])
+            bibcodes.extend(self._by_journal(journal))
         return bibcodes
+
+    def _by_fulltext_keyword(self, keyword, publications):
+        retries = 0
+        while retries <= self.max_retries:
+            try:
+                q = 'full:"{keyword}" AND pubdate:{pubdate}'.format(keyword=keyword, pubdate=self.pubdate)
+                query = ads.SearchQuery(q=q, fl=self.fields, fq='database:astronomy', max_pages=self.max_pages)
+                for result in list(query):
+                    if result.bibcode not in publications:
+                        publications[result.bibcode] = {f: getattr(result, f) for f in self.fields}
+                        publications[result.bibcode]['fulltext_keywords'] = []
+                    publications[result.bibcode]['fulltext_keywords'].append(keyword)
+                return
+            except ads.exceptions.APIResponseError:
+                retries += 1
+                print("Retrying...")
+                if retries > self.max_retries:
+                    raise
+
 
     def by_fulltext_keywords(self, keywords):
         """Query ADS for the publications containing any of a list of keywords.
@@ -81,15 +113,25 @@ class ADSQueries:
         publications = dict()
         for keyword in keywords:
             print('Searching for ' + keyword)
-            q = 'full:"{keyword}" AND pubdate:{pubdate}'.format(keyword=keyword, pubdate=self.pubdate)
-            query = ads.SearchQuery(q=q, fl=self.fields, fq='database:astronomy', max_pages=self.max_pages)
-            for result in list(query):
-                if result.bibcode not in publications:
-                    publications[result.bibcode] = {f: getattr(result, f) for f in self.fields}
-                    publications[result.bibcode]['fulltext_keywords'] = []
-                publications[result.bibcode]['fulltext_keywords'].append(keyword)
+            self._by_fulltext_keyword(keyword, publications)
 
         return publications
+
+    def _by_author(self, author, publications):
+        retries = 0
+        while retries <= self.max_retries:
+            try:
+                q = 'author:"{author}" AND pubdate:{pubdate}'.format(author=author, pubdate=self.pubdate)
+                query = ads.SearchQuery(q=q, fl=self.fields, fq='database:astronomy', max_pages=self.max_pages)
+                for result in list(query):
+                    if result.bibcode not in publications:
+                        publications[result.bibcode] = {f: getattr(result, f) for f in self.fields}
+                return
+            except ads.exceptions.APIResponseError:
+                retries += 1
+                print("Retrying...")
+                if retries > self.max_retries:
+                    raise
 
     def by_authors(self, authors):
         """Query ADS for the publications containing any of a list of authors.
@@ -111,13 +153,25 @@ class ADSQueries:
         publications = dict()
         for author in authors:
             print('Searching for ' + author)
-            q = 'author:"{author}" AND pubdate:{pubdate}'.format(author=author, pubdate=self.pubdate)
-            query = ads.SearchQuery(q=q, fl=self.fields, fq='database:astronomy', max_pages=self.max_pages)
-            for result in list(query):
-                if result.bibcode not in publications:
-                    publications[result.bibcode] = {f: getattr(result, f) for f in self.fields}
+            self._by_author(author, publications)
 
         return publications
+
+    def _by_affiliation(self, affiliation, publications):
+        retries = 0
+        while retries <= self.max_retries:
+            try:
+                q = 'aff:"{affiliation}" AND pubdate:{pubdate}'.format(affiliation=affiliation, pubdate=self.pubdate)
+                query = ads.SearchQuery(q=q, fl=self.fields, fq='database:astronomy', max_pages=self.max_pages)
+                for result in list(query):
+                    if result.bibcode not in publications:
+                        publications[result.bibcode] = {f: getattr(result, f) for f in self.fields}
+                return
+            except ads.exceptions.APIResponseError:
+                retries += 1
+                print("Retrying...")
+                if retries > self.max_retries:
+                    raise
 
     def by_affiliations(self, affiliations):
         """Query ADS for the publications with any of a list of affiliations.
@@ -140,13 +194,27 @@ class ADSQueries:
         publications = dict()
         for affiliation in affiliations:
             print('Searching for ' + affiliation)
-            q = 'aff:"{affiliation}" AND pubdate:{pubdate}'.format(affiliation=affiliation, pubdate=self.pubdate)
-            query = ads.SearchQuery(q=q, fl=self.fields, fq='database:astronomy', max_pages=self.max_pages)
-            for result in list(query):
-                if result.bibcode not in publications:
-                    publications[result.bibcode] = {f: getattr(result, f) for f in self.fields}
+            self._by_affiliation(affiliation, publications)
 
         return publications
+
+    def _by_institution(self, institution, publications):
+        retries = 0
+        while retries <= self.max_retries:
+            try:
+                q = 'institution:"{institution}" AND pubdate:{pubdate}'.format(
+                    institution=institution, pubdate=self.pubdate
+                )
+                query = ads.SearchQuery(q=q, fl=self.fields, fq='database:astronomy', max_pages=self.max_pages)
+                for result in list(query):
+                    if result.bibcode not in publications:
+                        publications[result.bibcode] = {f: getattr(result, f) for f in self.fields}
+                return
+            except ads.exceptions.APIResponseError:
+                retries += 1
+                print("Retrying...")
+                if retries > self.max_retries:
+                    raise
 
     def by_institutions(self, institutions):
         """Query ADS for the publications with any of a list of institutions.
@@ -169,14 +237,7 @@ class ADSQueries:
         publications = dict()
         for institution in institutions:
             print('Searching for ' + institution)
-            q = 'institution:"{institution}" AND pubdate:{pubdate}'.format(
-                institution=institution, pubdate=self.pubdate
-            )
-            query = ads.SearchQuery(q=q, fl=self.fields, fq='database:astronomy', max_pages=self.max_pages)
-            for result in list(query):
-                if result.bibcode not in publications:
-                    publications[result.bibcode] = {f: getattr(result, f) for f in self.fields}
-
+            self._by_institution(institution, publications)
         return publications
 
     def full_details(self, bibcode):
@@ -197,9 +258,17 @@ class ADSQueries:
         """
 
         try:
-            query = ads.SearchQuery(bibcode=bibcode, fl=self.fields, max_pages=self.max_pages)
-            details = list(query)[0]
-            return {f: getattr(details, f) for f in self.fields}
+            retries = 0
+            while retries <= self.max_retries:
+                try:
+                    query = ads.SearchQuery(bibcode=bibcode, fl=self.fields, max_pages=self.max_pages)
+                    details = list(query)[0]
+                    return {f: getattr(details, f) for f in self.fields}
+                except ads.exceptions.APIResponseError:
+                    retries += 1
+                    print("Retrying...")
+                    if retries > self.max_retries:
+                        raise
         except:
             details = {f: '' for f in self.fields}
             details['bibcode'] = bibcode

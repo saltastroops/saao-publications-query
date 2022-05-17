@@ -29,7 +29,7 @@ class WoSQueries:
 
         Returns
         -------
-        bool
+        WosIndexedStatus
              Whether the DOI is indexed.
 
         """

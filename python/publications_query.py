@@ -205,8 +205,19 @@ def get_authors_and_affiliations(publication):
     query_params = {'fl': 'aff, author', 'q': 'identifier:{0}'.format(publication['bibcode']), 'rows': 1}
     query_url = url_template.format(urlencode(query_params, quote_via=quote))
 
-    response = requests.get(query_url, headers={'Authorization': 'Bearer ' + config.ADS_API_KEY})
-    response.raise_for_status()
+    max_retries = 3
+    retries = 0
+    while retries <= max_retries:
+        try:
+            response = requests.get(query_url, headers={'Authorization': 'Bearer ' + config.ADS_API_KEY})
+            response.raise_for_status()
+            break
+        except requests.exceptions.HTTPError:
+            print("Retrying...")
+            retries += 1
+            if retries > max_retries:
+                raise
+
     soup = BeautifulSoup(response.text, 'html.parser')
     content = json.loads(soup.text)
     query_result = content['response']['docs'][0]
@@ -412,4 +423,5 @@ try:
         dict(name='all.xlsx', content=publications_spreadsheet(publications, columns.keys()))
     ], columns)
 except requests.exceptions.HTTPError as err:
-    print(err)
+    # print(err)
+    raise
