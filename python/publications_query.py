@@ -266,13 +266,13 @@ def get_salt_partners(affiliations):
     str
         SALT partner institutions separated by '|'.
     """
-    salt_partners = []
+    salt_partners = set()
     for k, affiliation in enumerate(affiliations.split('; ')):
         # add SALT partner institutions
         if any(partner in affiliation for partner in config.SALT_PARTNERS):
-            salt_partners.append(affiliation)
+            salt_partners.add(affiliation)
 
-    return set(salt_partners)
+    return salt_partners
 
 
 def get_saao_authors(affiliations, authors):
@@ -287,13 +287,13 @@ def get_saao_authors(affiliations, authors):
     str
         authors affiliated South African institutions separated by '|'.
     """
-    saao_authors = []
+    saao_authors = set()
     for k, affiliation in enumerate(affiliations.split('; ')):
         # only authors within the SAOO would have SALT as an affiliation
         saao_ins = ["SAAO", "South African Astronomical Observatory"]
         if any(institution in affiliation for institution in saao_ins):
-            saao_authors.append(authors[j])
-    return set(saao_authors)
+            saao_authors.add(authors[j])
+    return saao_authors
 
 
 def count_authors_affiliated_to_sa_ins(affiliations, authors):
@@ -309,17 +309,13 @@ def count_authors_affiliated_to_sa_ins(affiliations, authors):
     int
         counts of authors affiliated South African institutions
     """
-    authors_aff_to_sa_inst = []
+    authors_aff_to_sa_inst = set()
     for affiliation in affiliations:
         for k, ins in enumerate(affiliation.split('; ')):
             if "South Africa" in affiliation:
-                authors_aff_to_sa_inst.append(authors[k])
+                authors_aff_to_sa_inst.add(authors[k])
 
-    authors_list = set(authors_aff_to_sa_inst)
-
-    # removes all empty elements
-    authors_list_filtered = list(authors_list)
-    return len(authors_list_filtered)
+    return authors_aff_to_sa_inst
 
 
 def modify_list_contents(publication):
@@ -382,25 +378,20 @@ try:
         # First author institution and SALT partner institutions
         p['institute_of_first_author'] = affiliations[0]
 
-        saao_authors = []
-        south_african_affiliations = []
-        salt_partners = []
+        saao_authors = set()
+        south_african_affiliations = set()
+        salt_partners = set()
         for j, affiliation in enumerate(affiliations):
 
             if len(get_south_african_affiliations(affiliation)) > 0:
                 for aff in get_south_african_affiliations(affiliation):
-                    south_african_affiliations.append(aff)
+                    south_african_affiliations.add(aff)
             if len(get_saao_authors(affiliation, authors)) > 0:
                 for author in get_saao_authors(affiliation, authors):
-                    saao_authors.append(author)
+                    saao_authors.add(author)
             if len(get_salt_partners(affiliation)) > 0:
                 for partner in get_salt_partners(affiliation):
-                    salt_partners.append(partner)
-
-        # get unique list entries
-        saao_authors = set(saao_authors)
-        south_african_affiliations = set(south_african_affiliations)
-        salt_partners = set(salt_partners)
+                    salt_partners.add(partner)
 
         # removes all empty elements from the list
         p['authors_affiliated_with_SAAO'] = '; '.join(saao_authors)
