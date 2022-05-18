@@ -1,5 +1,6 @@
 import json
 import os
+from json import JSONDecodeError
 
 from dotenv import load_dotenv
 
@@ -9,7 +10,13 @@ ADS_API_KEY = os.getenv('ADS_API_KEY')
 
 WOS_API_KEY = os.getenv('WOS_API_KEY')
 
-LIBRARIAN_EMAIL_ADDRESSES = os.getenv('LIBRARIAN_EMAIL_ADDRESSES')
+try:
+    LIBRARIAN_EMAIL_ADDRESSES = json.loads(os.getenv('LIBRARIAN_EMAIL_ADDRESSES'))
+except JSONDecodeError:
+    raise ValueError("The value of the LIBRARIAN_EMAIL_ADDRESSES environment variable "
+                     "must be a list of double-quoted strings. For example: "
+                     "[\"John Doe <john@example.com>\", "
+                     "\"Jane Miller <jane@example.com>\"]")
 
 FROM_EMAIL_ADDRESS = os.getenv('FROM_EMAIL_ADDRESS')
 

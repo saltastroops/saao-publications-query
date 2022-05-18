@@ -155,7 +155,7 @@ def send_mails(spreadsheets, columns):
 
     outer = MIMEMultipart()
     outer['Subject'] = 'Publications Query Results'
-    outer['To'] = config.LIBRARIAN_EMAIL_ADDRESSES
+    outer['To'] = ', '.join(config.LIBRARIAN_EMAIL_ADDRESSES)
     outer['From'] = config.FROM_EMAIL_ADDRESS
     outer.preamble = 'You will not see this in a MIME-aware mail reader.\n'
 
