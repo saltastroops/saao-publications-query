@@ -75,8 +75,8 @@ KEYWORDS = [
 
 # authors to search for and their email addresses
 AUTHORS = {
-    'Skelton, R': 'Ros Skelton <ros@saao.ac.za>',
-    'Kniazev, A': 'Alexei Kniazev <akniazev@saao.ac.za~'
+    'Doe, Jane': 'Jane Doe <doe@example.com',
+    'Else, Someone': 'Someone Else <someone@sexample.com>'
 }
 
 AFFILIATIONS = [
