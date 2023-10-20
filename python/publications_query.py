@@ -292,6 +292,7 @@ def get_saao_authors(affiliations, authors):
         # only authors within the SAOO would have SALT as an affiliation
         saao_ins = ["SAAO", "South African Astronomical Observatory"]
         if any(institution in affiliation for institution in saao_ins):
+            k = min(k, len(authors) - 1)
             saao_authors.add(authors[k])
     return saao_authors
 
@@ -313,6 +314,7 @@ def count_authors_affiliated_to_sa_ins(affiliations, authors):
     for affiliation in affiliations:
         for k, ins in enumerate(affiliation.split('; ')):
             if "South Africa" in affiliation:
+                k = min(k, len(authors) - 1)
                 authors_aff_to_sa_inst.add(authors[k])
 
     return len(authors_aff_to_sa_inst)
