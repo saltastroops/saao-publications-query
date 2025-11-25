@@ -81,8 +81,8 @@ KEYWORDS = [
 
 # authors to search for and their email addresses
 AUTHORS = {
-    'Doe, Jane': 'Jane Doe <doe@example.com',
-    'Else, Someone': 'Someone Else <someone@sexample.com>'
+    "Doe, Jane": "Jane Doe <doe@example.com",
+    "Else, Someone": "Someone Else <someone@sexample.com>",
 }
 
 AFFILIATIONS = [
