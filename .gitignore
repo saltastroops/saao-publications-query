@@ -3,3 +3,5 @@ venv
 .venv
 java/target
 java/dependency-reduced-pom.xml
+.env*
+

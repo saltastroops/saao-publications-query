@@ -1,6 +1,6 @@
 import ads
 
-import config
+from pubquery import config
 
 
 class ADSQueries:
@@ -18,22 +18,23 @@ class ADSQueries:
 
     def __init__(self, from_date, to_date, max_pages=30):
         ads.config.token = config.ADS_API_KEY
-        self.pubdate = '[{from_date} TO {to_date}]'.format(from_date=from_date.strftime('%Y-%m'),
-                                                           to_date=to_date.strftime('%Y-%m'))
+        self.pubdate = "[{from_date} TO {to_date}]".format(
+            from_date=from_date.strftime("%Y-%m"), to_date=to_date.strftime("%Y-%m")
+        )
         self.fields = [
-            'abstract',
-            'aff',
-            'author',
-            'bibcode',
-            'data',
-            'doi',
-            'keyword',
-            'page',
-            'property',
-            'pub',
-            'pubdate',
-            'title',
-            'volume'
+            "abstract",
+            "aff",
+            "author",
+            "bibcode",
+            "data",
+            "doi",
+            "keyword",
+            "page",
+            "property",
+            "pub",
+            "pubdate",
+            "title",
+            "volume",
         ]
         self.max_pages = max_pages
         self.max_retries = 5
@@ -42,8 +43,10 @@ class ADSQueries:
         retries = 0
         while retries <= self.max_retries:
             try:
-                q = 'bibstem:{journal} AND pubdate:{pubdate}'.format(journal=journal, pubdate=self.pubdate)
-                query = ads.SearchQuery(q=q, fl=['bibcode'], max_pages=self.max_pages)
+                q = "bibstem:{journal} AND pubdate:{pubdate}".format(
+                    journal=journal, pubdate=self.pubdate
+                )
+                query = ads.SearchQuery(q=q, fl=["bibcode"], max_pages=self.max_pages)
                 return [a.bibcode for a in list(query)]
             except ads.exceptions.APIResponseError:
                 retries += 1
@@ -78,13 +81,22 @@ class ADSQueries:
         retries = 0
         while retries <= self.max_retries:
             try:
-                q = 'full:"{keyword}" AND pubdate:{pubdate}'.format(keyword=keyword, pubdate=self.pubdate)
-                query = ads.SearchQuery(q=q, fl=self.fields, fq='database:astronomy', max_pages=self.max_pages)
+                q = 'full:"{keyword}" AND pubdate:{pubdate}'.format(
+                    keyword=keyword, pubdate=self.pubdate
+                )
+                query = ads.SearchQuery(
+                    q=q,
+                    fl=self.fields,
+                    fq="database:astronomy",
+                    max_pages=self.max_pages,
+                )
                 for result in list(query):
                     if result.bibcode not in publications:
-                        publications[result.bibcode] = {f: getattr(result, f) for f in self.fields}
-                        publications[result.bibcode]['fulltext_keywords'] = []
-                    publications[result.bibcode]['fulltext_keywords'].append(keyword)
+                        publications[result.bibcode] = {
+                            f: getattr(result, f) for f in self.fields
+                        }
+                        publications[result.bibcode]["fulltext_keywords"] = []
+                    publications[result.bibcode]["fulltext_keywords"].append(keyword)
                 return
             except ads.exceptions.APIResponseError:
                 retries += 1
@@ -110,7 +122,7 @@ class ADSQueries:
 
         publications = dict()
         for keyword in keywords:
-            print('Searching for ' + keyword)
+            print("Searching for " + keyword)
             self._by_fulltext_keyword(keyword, publications)
 
         return publications
@@ -119,11 +131,20 @@ class ADSQueries:
         retries = 0
         while retries <= self.max_retries:
             try:
-                q = 'author:"{author}" AND pubdate:{pubdate}'.format(author=author, pubdate=self.pubdate)
-                query = ads.SearchQuery(q=q, fl=self.fields, fq='database:astronomy', max_pages=self.max_pages)
+                q = 'author:"{author}" AND pubdate:{pubdate}'.format(
+                    author=author, pubdate=self.pubdate
+                )
+                query = ads.SearchQuery(
+                    q=q,
+                    fl=self.fields,
+                    fq="database:astronomy",
+                    max_pages=self.max_pages,
+                )
                 for result in list(query):
                     if result.bibcode not in publications:
-                        publications[result.bibcode] = {f: getattr(result, f) for f in self.fields}
+                        publications[result.bibcode] = {
+                            f: getattr(result, f) for f in self.fields
+                        }
                 return
             except ads.exceptions.APIResponseError:
                 retries += 1
@@ -150,7 +171,7 @@ class ADSQueries:
 
         publications = dict()
         for author in authors:
-            print('Searching for ' + author)
+            print("Searching for " + author)
             self._by_author(author, publications)
 
         return publications
@@ -159,11 +180,20 @@ class ADSQueries:
         retries = 0
         while retries <= self.max_retries:
             try:
-                q = 'aff:"{affiliation}" AND pubdate:{pubdate}'.format(affiliation=affiliation, pubdate=self.pubdate)
-                query = ads.SearchQuery(q=q, fl=self.fields, fq='database:astronomy', max_pages=self.max_pages)
+                q = 'aff:"{affiliation}" AND pubdate:{pubdate}'.format(
+                    affiliation=affiliation, pubdate=self.pubdate
+                )
+                query = ads.SearchQuery(
+                    q=q,
+                    fl=self.fields,
+                    fq="database:astronomy",
+                    max_pages=self.max_pages,
+                )
                 for result in list(query):
                     if result.bibcode not in publications:
-                        publications[result.bibcode] = {f: getattr(result, f) for f in self.fields}
+                        publications[result.bibcode] = {
+                            f: getattr(result, f) for f in self.fields
+                        }
                 return
             except ads.exceptions.APIResponseError:
                 retries += 1
@@ -191,7 +221,7 @@ class ADSQueries:
 
         publications = dict()
         for affiliation in affiliations:
-            print('Searching for ' + affiliation)
+            print("Searching for " + affiliation)
             self._by_affiliation(affiliation, publications)
 
         return publications
@@ -203,10 +233,17 @@ class ADSQueries:
                 q = 'institution:"{institution}" AND pubdate:{pubdate}'.format(
                     institution=institution, pubdate=self.pubdate
                 )
-                query = ads.SearchQuery(q=q, fl=self.fields, fq='database:astronomy', max_pages=self.max_pages)
+                query = ads.SearchQuery(
+                    q=q,
+                    fl=self.fields,
+                    fq="database:astronomy",
+                    max_pages=self.max_pages,
+                )
                 for result in list(query):
                     if result.bibcode not in publications:
-                        publications[result.bibcode] = {f: getattr(result, f) for f in self.fields}
+                        publications[result.bibcode] = {
+                            f: getattr(result, f) for f in self.fields
+                        }
                 return
             except ads.exceptions.APIResponseError:
                 retries += 1
@@ -234,7 +271,7 @@ class ADSQueries:
 
         publications = dict()
         for institution in institutions:
-            print('Searching for ' + institution)
+            print("Searching for " + institution)
             self._by_institution(institution, publications)
         return publications
 
@@ -259,7 +296,9 @@ class ADSQueries:
             retries = 0
             while retries <= self.max_retries:
                 try:
-                    query = ads.SearchQuery(bibcode=bibcode, fl=self.fields, max_pages=self.max_pages)
+                    query = ads.SearchQuery(
+                        bibcode=bibcode, fl=self.fields, max_pages=self.max_pages
+                    )
                     details = list(query)[0]
                     return {f: getattr(details, f) for f in self.fields}
                 except ads.exceptions.APIResponseError:
@@ -268,6 +307,6 @@ class ADSQueries:
                     if retries > self.max_retries:
                         raise
         except:
-            details = {f: '' for f in self.fields}
-            details['bibcode'] = bibcode
+            details = {f: "" for f in self.fields}
+            details["bibcode"] = bibcode
             return details
