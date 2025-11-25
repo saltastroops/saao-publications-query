@@ -4,4 +4,7 @@ venv
 java/target
 java/dependency-reduced-pom.xml
 .env*
+.python-version
+.idea/
+*.egg-info
 
